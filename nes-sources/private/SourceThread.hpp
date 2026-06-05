@@ -31,6 +31,8 @@
 #include <magic_enum/magic_enum.hpp>
 #include <BackpressureChannel.hpp>
 #include <Thread.hpp>
+#include <QueryId.hpp>
+#include <QueryEngineStatisticListener.hpp>
 
 namespace NES
 {
@@ -61,6 +63,8 @@ public:
     explicit SourceThread(
         BackpressureListener backpressureListener,
         OriginId originId, /// Todo #241: Rethink use of originId for sources, use new identifier for unique identification.
+        QueryId queryId,
+        std::shared_ptr<QueryEngineStatisticListener> statisticListener,
         std::shared_ptr<AbstractBufferProvider> bufferManager,
         std::unique_ptr<Source> sourceImplementation);
 
@@ -90,6 +94,8 @@ public:
 
 protected:
     OriginId originId;
+    QueryId queryId;
+    std::shared_ptr<QueryEngineStatisticListener> statisticListener;
     std::shared_ptr<AbstractBufferProvider> localBufferManager;
     std::unique_ptr<Source> sourceImplementation;
     std::atomic_bool started;

@@ -330,6 +330,14 @@ void GoogleEventTracePrinter::threadRoutine(const std::stop_token& token)
 
                     /// Remove from active tasks if present
                     activeTasks.erase(taskExpired.taskId);
+                },
+                [&](const BufferAcquisitionLatency&)
+                {
+                    // Ignore for now
+                },
+                [&](const PipelineExecutionDuration&)
+                {
+                    // Ignore for now
                 }},
             event);
     }

@@ -63,7 +63,8 @@ std::ostream& operator<<(std::ostream& os, const ExecutableQueryPlan& instantiat
 }
 
 std::unique_ptr<ExecutableQueryPlan>
-ExecutableQueryPlan::instantiate(CompiledQueryPlan& compiledQueryPlan, const SourceProvider& sourceProvider)
+ExecutableQueryPlan::instantiate(
+    CompiledQueryPlan& compiledQueryPlan, const SourceProvider& sourceProvider, std::shared_ptr<QueryEngineStatisticListener> statisticListener)
 {
     std::vector<SourceWithSuccessor> instantiatedSources;
 
@@ -94,7 +95,9 @@ ExecutableQueryPlan::instantiate(CompiledQueryPlan& compiledQueryPlan, const Sou
     for (auto [originId, operatorId, descriptor, successors] : compiledQueryPlan.sources)
     {
         std::ranges::copy(instantiatedSinksWithSourcePredecessor[operatorId], std::back_inserter(successors));
-        instantiatedSources.emplace_back(sourceProvider.lower(originId, backpressureListener, descriptor), std::move(successors));
+        instantiatedSources.emplace_back(
+            sourceProvider.lower(originId, compiledQueryPlan.queryId, statisticListener, backpressureListener, descriptor),
+            std::move(successors));
     }
 
 

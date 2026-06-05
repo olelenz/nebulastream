@@ -206,9 +206,11 @@ struct DefaultPEC final : PipelineExecutionContext
     std::function<bool(const TupleBuffer& tb, ContinuationPolicy)> handler;
     std::function<void(const TupleBuffer& tb, std::chrono::milliseconds duration)> repeatHandler;
     std::shared_ptr<AbstractBufferProvider> bm;
+    std::shared_ptr<QueryEngineStatisticListener> statisticListener;
     size_t numberOfThreads;
     WorkerThreadId threadId;
     PipelineId pipelineId;
+    QueryId queryId;
     /// We want to ensure that the address of the TupleBuffer is always the same. If we would simply store the object directly in the vector,
     /// the address might change as the vector might be resized and thus, the object have a different address.
     std::vector<std::unique_ptr<TupleBuffer>> pinnedBuffers;
@@ -221,15 +223,19 @@ struct DefaultPEC final : PipelineExecutionContext
         size_t numberOfThreads,
         WorkerThreadId threadId,
         PipelineId pipelineId,
+        QueryId queryId,
         std::shared_ptr<AbstractBufferProvider> bm,
+        std::shared_ptr<QueryEngineStatisticListener> statisticListener,
         std::function<bool(const TupleBuffer& tb, ContinuationPolicy)> handler,
         std::function<void(const TupleBuffer& tb, std::chrono::milliseconds)> repeatHandler)
         : handler(std::move(handler))
         , repeatHandler(std::move(repeatHandler))
         , bm(std::move(bm))
+        , statisticListener(std::move(statisticListener))
         , numberOfThreads(numberOfThreads)
         , threadId(threadId)
         , pipelineId(pipelineId)
+        , queryId(queryId)
     {
     }
 
@@ -284,6 +290,18 @@ struct DefaultPEC final : PipelineExecutionContext
     {
         PRECONDITION(!wasRepeated, "A task should terminate after repeating");
         return pipelineId;
+    }
+
+    [[nodiscard]] QueryId getQueryId() const override
+    {
+        PRECONDITION(!wasRepeated, "A task should terminate after repeating");
+        return queryId;
+    }
+
+    [[nodiscard]] std::shared_ptr<QueryEngineStatisticListener> getStatisticListener() const override
+    {
+        PRECONDITION(!wasRepeated, "A task should terminate after repeating");
+        return statisticListener;
     }
 
     std::unordered_map<OperatorHandlerId, std::shared_ptr<OperatorHandler>>& getOperatorHandlers() override
@@ -492,7 +510,9 @@ bool ThreadPool::WorkerThread::operator()(WorkTask& task) const
             pool.numberOfThreads(),
             WorkerThread::id,
             pipeline->id,
+            task.queryId,
             pool.bufferProvider,
+            pool.statistic,
             [&](const TupleBuffer& tupleBuffer, PipelineExecutionContext::ContinuationPolicy continuationPolicy)
             {
                 ENGINE_LOG_DEBUG(
@@ -549,7 +569,9 @@ bool ThreadPool::WorkerThread::operator()(StartPipelineTask& startPipeline) cons
             pool.numberOfThreads(),
             WorkerThread::id,
             pipeline->id,
+            startPipeline.queryId,
             pool.bufferProvider,
+            pool.statistic,
             [](const TupleBuffer&, PipelineExecutionContext::ContinuationPolicy)
             {
                 /// Catch Emits, that are currently not supported during pipeline stage initialization.
@@ -627,7 +649,9 @@ bool ThreadPool::WorkerThread::operator()(StopPipelineTask& stopPipelineTask) co
         pool.numberOfThreads(),
         WorkerThread::id,
         stopPipelineTask.pipeline->id,
+        stopPipelineTask.queryId,
         pool.bufferProvider,
+        pool.statistic,
         [&](const TupleBuffer& tupleBuffer, PipelineExecutionContext::ContinuationPolicy policy)
         {
             if (terminating)

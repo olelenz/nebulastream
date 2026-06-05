@@ -139,6 +139,32 @@ struct PipelineStop : EventBase
     PipelineId pipelineId = INVALID<PipelineId>;
 };
 
+struct BufferAcquisitionLatency : EventBase
+{
+    BufferAcquisitionLatency(WorkerThreadId threadId, QueryId queryId, OriginId originId, std::chrono::microseconds latency)
+        : EventBase(threadId, queryId), originId(originId), latency(latency)
+    {
+    }
+
+    BufferAcquisitionLatency() = default;
+
+    OriginId originId = INVALID_ORIGIN_ID;
+    std::chrono::microseconds latency;
+};
+
+struct PipelineExecutionDuration : EventBase
+{
+    PipelineExecutionDuration(WorkerThreadId threadId, QueryId queryId, PipelineId pipelineId, std::chrono::microseconds duration)
+        : EventBase(threadId, queryId), pipelineId(pipelineId), duration(duration)
+    {
+    }
+
+    PipelineExecutionDuration() = default;
+
+    PipelineId pipelineId = INVALID<PipelineId>;
+    std::chrono::microseconds duration;
+};
+
 using Event = std::variant<
     TaskExecutionStart,
     TaskEmit,
@@ -149,7 +175,9 @@ using Event = std::variant<
     QueryStart,
     QueryStopRequest,
     QueryStop,
-    QueryFail>;
+    QueryFail,
+    BufferAcquisitionLatency,
+    PipelineExecutionDuration>;
 
 struct QueryEngineStatisticListener
 {

@@ -35,6 +35,8 @@
 #include <Sources/Source.hpp>
 #include <Sources/SourceHandle.hpp>
 #include <Util/Logger/Logger.hpp>
+#include <QueryId.hpp>
+#include <QueryEngineStatisticListener.hpp>
 #include <Util/Overloaded.hpp>
 #include <gtest/gtest.h>
 #include <ErrorHandling.hpp>
@@ -236,6 +238,6 @@ NES::getTestSource(BackpressureListener backpressureListener, OriginId originId,
     SourceRuntimeConfiguration runtimeConfig{DEFAULT_NUMBER_OF_LOCAL_BUFFERS};
 
     auto sourceHandle = std::make_unique<SourceHandle>(
-        std::move(backpressureListener), std::move(originId), std::move(runtimeConfig), std::move(bufferPool), std::move(testSource));
+        std::move(backpressureListener), std::move(originId), INVALID_QUERY_ID, nullptr, std::move(runtimeConfig), std::move(bufferPool), std::move(testSource));
     return {std::move(sourceHandle), ctrl};
 }

@@ -19,6 +19,7 @@
 #include <exception>
 #include <functional>
 #include <future>
+#include <iostream>
 #include <memory>
 #include <stop_token>
 #include <string>
@@ -36,6 +37,7 @@
 #include <ErrorHandling.hpp>
 #include <Thread.hpp>
 #include <scope_guard.hpp>
+#include <QueryEngine.hpp>
 
 namespace NES
 {
@@ -43,9 +45,13 @@ namespace NES
 SourceThread::SourceThread(
     BackpressureListener backpressureListener,
     OriginId originId,
+    QueryId queryId,
+    std::shared_ptr<QueryEngineStatisticListener> statisticListener,
     std::shared_ptr<AbstractBufferProvider> poolProvider,
     std::unique_ptr<Source> sourceImplementation)
     : originId(originId)
+    , queryId(queryId)
+    , statisticListener(std::move(statisticListener))
     , localBufferManager(std::move(poolProvider))
     , sourceImplementation(std::move(sourceImplementation))
     , backpressureListener(std::move(backpressureListener))
@@ -83,7 +89,10 @@ SourceImplementationTermination dataSourceThreadRoutine(
     BackpressureListener backpressureListener,
     Source& source,
     std::shared_ptr<AbstractBufferProvider> bufferProvider,
-    const EmitFn& emit)
+    const EmitFn& emit,
+    QueryId queryId,
+    OriginId originId,
+    std::shared_ptr<QueryEngineStatisticListener> statisticListener)
 {
     source.open(bufferProvider);
     SCOPE_EXIT
@@ -103,15 +112,23 @@ SourceImplementationTermination dataSourceThreadRoutine(
         /// 4. Failure. The fillTupleBuffer method will throw an exception, the exception is propagted to the SourceThread via the return promise.
         ///    The thread exists with an exception
 
+        auto start = std::chrono::high_resolution_clock::now();
         std::optional<TupleBuffer> emptyBuffer;
         while (!emptyBuffer && !stopToken.stop_requested())
         {
-            emptyBuffer = bufferProvider->getBufferWithTimeout(std::chrono::milliseconds(25));
+            std::cout << "------> Source is waiting for a buffer...\n";
+            emptyBuffer = bufferProvider->getBufferWithTimeout(std::chrono::milliseconds(25));  // TODO: why is 25 hardcoded here???
         }
+        auto end = std::chrono::high_resolution_clock::now();
         if (stopToken.stop_requested())
         {
             return {SourceImplementationTermination::StopRequested};
         }
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::cout << "------> Buffer acquisition latency: " << duration.count() << "us\n";
+        statisticListener->onEvent(BufferAcquisitionLatency(WorkerThreadId(0), queryId, originId, duration));
+        std::cout << "------> Source acquired a buffer!\n";
+        NES_INFO()
 
         const auto fillTupleResult = source.fillTupleBuffer(*emptyBuffer, stopToken);
 
@@ -143,7 +160,9 @@ void dataSourceThread(
     SourceReturnType::EmitFunction emit,
     const OriginId originId,
     ///NOLINTNEXTLINE(performance-unnecessary-value-param) `jthread` does not allow references
-    std::shared_ptr<AbstractBufferProvider> bufferProvider)
+    std::shared_ptr<AbstractBufferProvider> bufferProvider,
+    QueryId queryId,
+    std::shared_ptr<QueryEngineStatisticListener> statisticListener)
 {
     size_t sequenceNumberGenerator = SequenceNumber::INITIAL;
     const EmitFn dataEmit = [&](TupleBuffer&& buffer, bool shouldAddMetadata)
@@ -158,7 +177,7 @@ void dataSourceThread(
     try
     {
         result.set_value_at_thread_exit(
-            dataSourceThreadRoutine(stopToken, std::move(backpressureListener), *source, std::move(bufferProvider), dataEmit));
+            dataSourceThreadRoutine(stopToken, std::move(backpressureListener), *source, std::move(bufferProvider), dataEmit, queryId, originId, std::move(statisticListener)));
         if (!stopToken.stop_requested())
         {
             emit(originId, SourceReturnType::EoS{}, stopToken);
@@ -193,7 +212,9 @@ bool SourceThread::start(SourceReturnType::EmitFunction&& emitFunction)
         sourceImplementation.get(),
         std::move(emitFunction),
         originId,
-        localBufferManager);
+        localBufferManager,
+        queryId,
+        statisticListener);
     thread = std::move(sourceThread);
     return true;
 }

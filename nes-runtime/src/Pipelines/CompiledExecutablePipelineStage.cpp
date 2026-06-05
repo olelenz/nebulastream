@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <ostream>
 #include <unordered_map>
@@ -52,7 +53,16 @@ void CompiledExecutablePipelineStage::execute(const TupleBuffer& inputTupleBuffe
     /// we call the compiled pipeline function with an input buffer and the execution context
     pipelineExecutionContext.setOperatorHandlers(operatorHandlers);
     Arena arena(pipelineExecutionContext.getBufferManager());
+    auto start = std::chrono::high_resolution_clock::now();
     compiledPipelineFunction(std::addressof(pipelineExecutionContext), std::addressof(inputTupleBuffer), std::addressof(arena));
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "------> Pipeline stage execution duration: " << duration.count() << "us\n";
+    pipelineExecutionContext.getStatisticListener()->onEvent(
+        PipelineExecutionDuration(pipelineExecutionContext.getWorkerThreadId(),
+                                   pipelineExecutionContext.getQueryId(),
+                                   pipelineExecutionContext.getPipelineId(),
+                                   duration));
 }
 
 nautilus::engine::CallableFunction<void, PipelineExecutionContext*, const TupleBuffer*, const Arena*>

@@ -13,10 +13,12 @@
 */
 
 #pragma once
+
 #include <memory>
 #include <Identifiers/Identifiers.hpp>
 #include <Listeners/QueryLog.hpp>
 #include <Listeners/SystemEventListener.hpp>
+#include <QueryEngineStatisticListener.hpp>
 #include <Runtime/BufferManager.hpp>
 
 #include <Sources/SourceProvider.hpp>
@@ -44,6 +46,7 @@ public:
     NodeEngine(
         std::shared_ptr<BufferManager> bufferManager,
         std::shared_ptr<SystemEventListener> systemEventListener,
+        std::shared_ptr<QueryEngineStatisticListener> statisticListener,
         std::shared_ptr<QueryLog> queryLog,
         std::unique_ptr<QueryEngine> queryEngine,
         std::unique_ptr<SourceProvider> sourceProvider);
@@ -65,6 +68,7 @@ private:
     std::shared_ptr<QueryLog> queryLog;
 
     std::shared_ptr<SystemEventListener> systemEventListener;
+    std::shared_ptr<QueryEngineStatisticListener> statisticListener;
     std::unique_ptr<QueryEngine> queryEngine;
     std::unique_ptr<QueryTracker> queryTracker;
     std::unique_ptr<SourceProvider> sourceProvider;
