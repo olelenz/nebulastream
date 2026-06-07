@@ -1,11 +1,13 @@
 #pragma once
-#include <string>
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
-#include <condition_variable>
-#include <atomic>
+#include "NesStatisticsEvents.hpp"
 
 // TODO: we should make this fast
 
@@ -16,7 +18,7 @@ class NesStatistics{
             return instance;
         }
 
-        void nesStats(const std::string& msg);
+        void nesStats(std::unique_ptr<NesStatisticsEvents> event);
 
         // make this a singleton
         NesStatistics(NesStatistics const&) = delete;
@@ -27,7 +29,7 @@ class NesStatistics{
         ~NesStatistics();
 
         void workStatsQueue();
-        std::queue<std::string> statsQueue;
+        std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
         std::condition_variable condVar;
         std::atomic<bool> running{true};
         std::thread workThread;

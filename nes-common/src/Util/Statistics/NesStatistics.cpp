@@ -15,13 +15,13 @@ NesStatistics::~NesStatistics() {
     }
 }
 
-void NesStatistics::nesStats(const std::string& msg){
-    std::cout << "NES-STAT: " << msg << std::endl;
-
+void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
+    std::cout << "NES-STAT: " << event->toCSV() << std::endl;
     {
         std::lock_guard<std::mutex> lock(statsMutex);
-        statsQueue.push(msg);
+        statsQueue.push(std::move(event));
     }
+    condVar.notify_one();
 }
 
 void NesStatistics::workStatsQueue(){
@@ -33,6 +33,7 @@ void NesStatistics::workStatsQueue(){
 
     while(true){
         std::string msg;
+        std::unique_ptr<NesStatisticsEvents> currentEvent;
         {
             std::unique_lock<std::mutex> lock(statsMutex);
             condVar.wait(lock, [this](){
@@ -41,10 +42,10 @@ void NesStatistics::workStatsQueue(){
             if(statsQueue.empty() && !running){
                 break;
             }
-            msg = statsQueue.front();
+            currentEvent = std::move(statsQueue.front());
             statsQueue.pop();
         }
-        outFile << msg << "\n";
+        outFile << currentEvent->toCSV() << "\n";
     }
     outFile.close();
 
