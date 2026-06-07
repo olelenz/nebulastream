@@ -11,6 +11,8 @@
 
 // TODO: we should make this fast
 
+namespace NES {
+
 class NesStatistics{
     public:
         static NesStatistics& getInstance(){
@@ -35,3 +37,5 @@ class NesStatistics{
         std::thread workThread;
         std::mutex statsMutex;
 };
+
+}

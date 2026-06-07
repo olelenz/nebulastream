@@ -1,8 +1,9 @@
 #include <Util/Statistics/NesStatistics.hpp>
 #include <fstream>
 
-
 // TODO: how do we delete stuff from the file?
+
+namespace NES {
 
 NesStatistics::NesStatistics() {
     workThread = std::thread(&NesStatistics::workStatsQueue, this);
@@ -45,8 +46,10 @@ void NesStatistics::workStatsQueue(){
             currentEvent = std::move(statsQueue.front());
             statsQueue.pop();
         }
-        outFile << currentEvent->toCSV() << "\n";
+        outFile << currentEvent->toCSV() << "\n";  // TODO: write in blocks
     }
     outFile.close();
+
+}
 
 }
