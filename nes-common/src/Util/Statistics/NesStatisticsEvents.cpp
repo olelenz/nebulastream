@@ -2,10 +2,10 @@
 
 namespace NES {
 
-NesBufferAllocateEvent::NesBufferAllocateEvent(int queryId) : id(queryId){};
+NesBufferAllocateEvent::NesBufferAllocateEvent(int queryId, size_t bufferSize) : id(queryId), size(bufferSize){};
 
 std::string NesBufferAllocateEvent::toCSV() const {
-    return "TEST " + std::to_string(id);
+    return "BufferAllocation " + std::to_string(id) + " : " + std::to_string(size);  // TODO: make this actual csv
 }
 
 }

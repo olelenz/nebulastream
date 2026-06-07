@@ -173,7 +173,6 @@ TupleBuffer BufferManager::getBufferBlocking()
     auto buffer = getBufferWithTimeout(GET_BUFFER_TIMEOUT);
     if (buffer.has_value())
     {
-        logStat<NesBufferAllocateEvent>(13);
         return buffer.value();
     }
     /// Throw exception if no buffer was returned allocated after timeout.
@@ -189,6 +188,7 @@ std::optional<TupleBuffer> BufferManager::getBufferNoBlocking()
     }
     if (memSegment->controlBlock->prepare(shared_from_this()))
     {
+        logStat<NesBufferAllocateEvent>(0, memSegment->size);
         return TupleBuffer(memSegment->controlBlock.get(), memSegment->ptr, memSegment->size);
     }
     throw InvalidRefCountForBuffer("[BufferManager] got buffer with invalid reference counter");
@@ -204,6 +204,7 @@ std::optional<TupleBuffer> BufferManager::getBufferWithTimeout(const std::chrono
     }
     if (memSegment->controlBlock->prepare(shared_from_this()))
     {
+        logStat<NesBufferAllocateEvent>(0, memSegment->size);
         return TupleBuffer(memSegment->controlBlock.get(), memSegment->ptr, memSegment->size);
     }
     throw InvalidRefCountForBuffer("[BufferManager] got buffer with invalid reference counter");

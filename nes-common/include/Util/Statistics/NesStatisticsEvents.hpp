@@ -11,12 +11,13 @@ class NesStatisticsEvents{
 
 class NesBufferAllocateEvent : public NesStatisticsEvents{
 public:
-    explicit NesBufferAllocateEvent(int queryId);
+    explicit NesBufferAllocateEvent(int queryId, size_t bufferSize);
 
     std::string toCSV() const override;
 
 private:
     int id;
+    size_t size;
 };
 
 }
