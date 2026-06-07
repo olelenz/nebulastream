@@ -2,6 +2,10 @@
 #include <string>
 #include <iostream>
 #include <mutex>
+#include <queue>
+#include <thread>
+#include <condition_variable>
+#include <atomic>
 
 // TODO: we should make this fast
 
@@ -19,7 +23,13 @@ class NesStatistics{
         void operator=(NesStatistics const&) = delete;
 
     private:
-        NesStatistics(){}
+        NesStatistics();
+        ~NesStatistics();
 
+        void workStatsQueue();
+        std::queue<std::string> statsQueue;
+        std::condition_variable condVar;
+        std::atomic<bool> running{true};
+        std::thread workThread;
         std::mutex statsMutex;
 };
