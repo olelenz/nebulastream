@@ -173,7 +173,7 @@ TupleBuffer BufferManager::getBufferBlocking()
     auto buffer = getBufferWithTimeout(GET_BUFFER_TIMEOUT);
     if (buffer.has_value())
     {
-        NesStatistics::getInstance().nesStats(std::make_unique<NesBufferAllocateEvent>(13));
+        logStat<NesBufferAllocateEvent>(13);
         return buffer.value();
     }
     /// Throw exception if no buffer was returned allocated after timeout.

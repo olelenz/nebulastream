@@ -38,4 +38,11 @@ class NesStatistics{
         std::mutex statsMutex;
 };
 
+template<typename EventType, typename... Args>
+    void logStat(Args&&... args) {
+    NesStatistics::getInstance().nesStats(
+        std::make_unique<EventType>(std::forward<Args>(args)...)
+    );
+}
+
 }
