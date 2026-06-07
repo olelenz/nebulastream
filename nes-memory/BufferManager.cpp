@@ -34,6 +34,8 @@
 #include <ErrorHandling.hpp>
 #include <TupleBufferImpl.hpp>
 
+#include <Util/Statistics/NesStatistics.hpp>
+
 namespace NES
 {
 
@@ -171,6 +173,7 @@ TupleBuffer BufferManager::getBufferBlocking()
     auto buffer = getBufferWithTimeout(GET_BUFFER_TIMEOUT);
     if (buffer.has_value())
     {
+        NesStatistics::getInstance().nesStats("test");
         return buffer.value();
     }
     /// Throw exception if no buffer was returned allocated after timeout.

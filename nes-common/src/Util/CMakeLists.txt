@@ -18,3 +18,4 @@ add_source_files(nes-common
         Signal.cpp
 )
 add_subdirectory(Logger)
+add_subdirectory(Statistics)
