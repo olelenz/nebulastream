@@ -25,6 +25,18 @@ void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
     condVar.notify_one();
 }
 
+void NesStatistics::nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event){
+    std::cout << "NES-STAT: " << event->toCSV() << std::endl;
+    std::lock_guard<std::mutex> lock(this->statsMutex);
+    std::ofstream outFile("stats-test.csv", std::ios::app);
+    if (!outFile.is_open()) {
+        std::cout << "Could not open file \n";
+        return;
+    }
+    outFile << event->toCSV() << "\n";
+    outFile.close();
+}
+
 void NesStatistics::workStatsQueue(){
     std::ofstream outFile("stats-test.csv", std::ios::app);
     if (!outFile.is_open()) {

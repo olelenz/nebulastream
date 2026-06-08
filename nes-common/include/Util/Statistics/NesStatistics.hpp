@@ -21,6 +21,7 @@ class NesStatistics{
         }
 
         void nesStats(std::unique_ptr<NesStatisticsEvents> event);
+        void nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event);
 
         // make this a singleton
         NesStatistics(NesStatistics const&) = delete;
@@ -40,6 +41,12 @@ class NesStatistics{
 
 template<typename EventType, typename... Args>
     void logStat(Args&&... args) {
+    NesStatistics::getInstance().nesStats(
+        std::make_unique<EventType>(std::forward<Args>(args)...)
+    );
+}
+template<typename EventType, typename... Args>
+    void logStatSlow(Args&&... args) {
     NesStatistics::getInstance().nesStats(
         std::make_unique<EventType>(std::forward<Args>(args)...)
     );
