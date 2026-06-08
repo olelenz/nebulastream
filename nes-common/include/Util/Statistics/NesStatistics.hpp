@@ -1,7 +1,7 @@
 #pragma once
 #include <atomic>
 #include <condition_variable>
-#include <iostream>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -13,6 +13,11 @@
 
 namespace NES {
 
+enum class StatisticsWorkerType {
+    Buffered,
+    Chunked
+};
+
 class NesStatistics{
     public:
         static NesStatistics& getInstance(){
@@ -20,6 +25,7 @@ class NesStatistics{
             return instance;
         }
 
+        void start(StatisticsWorkerType type, const std::string& filePath);
         void nesStats(std::unique_ptr<NesStatisticsEvents> event);
         void nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event);
         void shutdown();
@@ -33,11 +39,13 @@ class NesStatistics{
         ~NesStatistics();
 
         void workStatsQueue();
+        void workStatsQueueChunked();
         std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
         std::condition_variable condVar;
         std::atomic<bool> running{true};
         std::thread workThread;
         std::mutex statsMutex;
+        std::ofstream outFile;
 };
 
 template<typename EventType, typename... Args>

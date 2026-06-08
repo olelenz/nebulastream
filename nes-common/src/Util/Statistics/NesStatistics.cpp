@@ -1,26 +1,56 @@
 #include <Util/Statistics/NesStatistics.hpp>
 #include <fstream>
+#include <iostream>
+#include <mutex>
 
 // TODO: how do we delete stuff from the file?
 
 namespace NES {
 
-NesStatistics::NesStatistics() {
-    workThread = std::thread(&NesStatistics::workStatsQueue, this);
-}
+NesStatistics::NesStatistics() : running(false){}
 NesStatistics::~NesStatistics() {
     shutdown();
 }
+void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath){
+    if(running){
+        return;
+    }
+    running = true;
+    outFile.open(filePath, std::ios::app);
+    if(!outFile.is_open()){
+        std::cout << "Could not open file \n";
+        return;
+    }
+    if(type == StatisticsWorkerType::Buffered){
+        workThread = std::thread(&NesStatistics::workStatsQueue, this);
+    } else if(type == StatisticsWorkerType::Chunked){
+        workThread = std::thread(&NesStatistics::workStatsQueueChunked, this);
+    }
+}
+
+
 void NesStatistics::shutdown(){
+    if(!running){
+        return;
+    }
     running = false;
     condVar.notify_one();
     if (workThread.joinable()) {
         workThread.join();
     }
+    if(outFile.is_open()){
+        outFile.close();
+    }
 }
 
 void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
-    //std::cout << "NES-STAT: " << event->toCSV() << std::endl;
+    if(!running){
+        std::lock_guard<std::mutex> lock(statsMutex);
+        if(!running){
+            start(StatisticsWorkerType::Chunked, "nes-stats-default-csv");
+        }
+    }
+
     bool wakeUpThread = false;
     {
         std::lock_guard<std::mutex> lock(statsMutex);
@@ -33,9 +63,8 @@ void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
 }
 
 void NesStatistics::nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event){
-    //std::cout << "NES-STAT: " << event->toCSV() << std::endl;
     std::lock_guard<std::mutex> lock(this->statsMutex);
-    std::ofstream outFile("stats-test.csv", std::ios::app);
+    std::ofstream outFile("stats-test-slow.csv", std::ios::app);
     if (!outFile.is_open()) {
         std::cout << "Could not open file \n";
         return;
@@ -46,14 +75,7 @@ void NesStatistics::nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event){
 }
 
 void NesStatistics::workStatsQueue(){
-    std::ofstream outFile("stats-test.csv", std::ios::app);
-    if (!outFile.is_open()) {
-        std::cout << "Could not open file \n";
-        return;
-    }
-
-    while(true){
-        std::string msg;
+    while(running || !statsQueue.empty()){
         std::unique_ptr<NesStatisticsEvents> currentEvent;
         {
             std::unique_lock<std::mutex> lock(statsMutex);
@@ -66,10 +88,42 @@ void NesStatistics::workStatsQueue(){
             currentEvent = std::move(statsQueue.front());
             statsQueue.pop();
         }
-        outFile << currentEvent->toCSV() << "\n";  // TODO: write in blocks
+        if(currentEvent){
+            outFile << currentEvent->toCSV() << "\n";
+        }
     }
     outFile.close();
 
+}
+void NesStatistics::workStatsQueueChunked() {
+    const int CHUNK_SIZE = 1000;
+    std::vector<std::unique_ptr<NesStatisticsEvents>> batch;
+    batch.reserve(CHUNK_SIZE);
+
+    while (running || !statsQueue.empty()) {
+        {
+            std::unique_lock<std::mutex> lock(statsMutex);
+            condVar.wait(lock, [this]() {
+                return !statsQueue.empty() || !running;
+            });
+
+            int count = 0;
+            while (!statsQueue.empty() && count < CHUNK_SIZE) {
+                batch.push_back(std::move(statsQueue.front()));
+                statsQueue.pop();
+                count++;
+            }
+        }
+
+        if(!batch.empty()){
+            for (const auto& event : batch) {
+                outFile << event->toCSV() << "\n";
+            }
+            outFile.flush();
+            batch.clear();
+        }
+    }
+    outFile.close();
 }
 
 }

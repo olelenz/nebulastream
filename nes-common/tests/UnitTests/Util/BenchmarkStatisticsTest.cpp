@@ -9,72 +9,67 @@
 
 namespace NES
 {
-void workerTask(int threadId, int iterations) {
-    for (int i = 0; i < iterations; ++i) {
-        NES::logStat<NES::NesBufferAllocateEvent>(threadId * 10000 + i, 4096);
-    }
-}
-void workerTaskSlow(int threadId, int iterations) {
-    for (int i = 0; i < iterations; ++i) {
+
+const int NUM_THREADS = 10;
+
+void workerTaskSlow(int threadId, int eventsPerThread) {
+    for (int i = 0; i < eventsPerThread; ++i) {
         NES::logStatSlow<NES::NesBufferAllocateEvent>(threadId * 10000 + i, 4096);
     }
 }
 
-TEST(Simple, Slow){
-    const int NUM_THREADS = 10;
-    const int EVENTS_PER_THREAD = 5000;
-    const int TOTAL_EVENTS = NUM_THREADS * EVENTS_PER_THREAD;
-
-    std::cout << "Spawning " << NUM_THREADS << " threads...\n";
-    std::cout << "Each thread firing " << EVENTS_PER_THREAD << " events.\n";
-    std::cout << "Total Events to Write: " << TOTAL_EVENTS << "\n\n";
-
-    std::vector<std::thread> threads;
-
-    auto startTime = std::chrono::high_resolution_clock::now();
-
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back(workerTaskSlow, i, EVENTS_PER_THREAD);
+void workerTaskAsync(int threadId, int eventsPerThread) {
+    for (int i = 0; i < eventsPerThread; ++i) {
+        NES::logStat<NES::NesBufferAllocateEvent>(threadId * 10000 + i, 4096);
     }
-
-    for (auto& t : threads) {
-        t.join();
-    }
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> totalTime = endTime - startTime;
-
-    std::cout << "RESULTS (" << TOTAL_EVENTS << " Events)\n";
-    std::cout << "Time: " << totalTime.count() << " ms\n";
-
 }
 
-TEST(Simple, Fast){
-    const int NUM_THREADS = 10;
-    const int EVENTS_PER_THREAD = 5000;
-    const int TOTAL_EVENTS = NUM_THREADS * EVENTS_PER_THREAD;
+void runBenchmark(const std::string& name, int totalEvents, std::function<void(int, int)> task, bool useWorker, NES::StatisticsWorkerType workerType = NES::StatisticsWorkerType::Buffered) {
+    if (totalEvents % NUM_THREADS != 0) {
+        return;
+    }
+    const int eventsPerThread = totalEvents / NUM_THREADS;
 
-    std::cout << "Starting dual-timer benchmark...\n\n";
+    if (useWorker) {
+        std::string fileName = "stats-test-" + name + ".csv";
+        NES::NesStatistics::getInstance().start(workerType, fileName);
+    }
 
     std::vector<std::thread> threads;
-
     auto startTime = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back(workerTask, i, EVENTS_PER_THREAD);
+        threads.emplace_back(task, i, eventsPerThread);
     }
     for (auto& t : threads) {
         t.join();
     }
 
-    NesStatistics::getInstance().shutdown();
+    if (useWorker) {
+        NES::NesStatistics::getInstance().shutdown();
+    }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> totalTime = endTime - startTime;
+    std::chrono::duration<double, std::milli> duration = endTime - startTime;
+
+    std::cout << name << "," << totalEvents << "," << duration.count() << std::endl;
+}
 
 
-    std::cout << "RESULTS (" << TOTAL_EVENTS << " Events)\n";
-    std::cout << "Time: " << totalTime.count() << " ms\n";
+TEST(Bench, One){
+    std::vector<int> eventCounts = {10, 100, 1000, 10000, 50000, 100000, 250000, 500000};
+    std::ofstream("stats-test-Slow.csv", std::ofstream::trunc).close();
+    std::ofstream("stats-test-Buffered.csv", std::ofstream::trunc).close();
+    std::ofstream("stats-test-Chunked.csv", std::ofstream::trunc).close();
+
+    std::cout << "Strategy,EventCount,TimeMS" << std::endl;
+    for (int count : eventCounts) {
+        runBenchmark("Slow", count, workerTaskSlow, false);
+        runBenchmark("Buffered", count, workerTaskAsync, true, NES::StatisticsWorkerType::Buffered);
+        runBenchmark("Chunked", count, workerTaskAsync, true, NES::StatisticsWorkerType::Chunked);
+    }
+
+    std::cout << "\nComplete. " << std::endl;
 }
 
 }
