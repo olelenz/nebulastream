@@ -9,6 +9,9 @@ NesStatistics::NesStatistics() {
     workThread = std::thread(&NesStatistics::workStatsQueue, this);
 }
 NesStatistics::~NesStatistics() {
+    shutdown();
+}
+void NesStatistics::shutdown(){
     running = false;
     condVar.notify_one();
     if (workThread.joinable()) {
@@ -17,23 +20,28 @@ NesStatistics::~NesStatistics() {
 }
 
 void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
-    std::cout << "NES-STAT: " << event->toCSV() << std::endl;
+    //std::cout << "NES-STAT: " << event->toCSV() << std::endl;
+    bool wakeUpThread = false;
     {
         std::lock_guard<std::mutex> lock(statsMutex);
+        wakeUpThread = statsQueue.empty();
         statsQueue.push(std::move(event));
     }
-    condVar.notify_one();
+    if (wakeUpThread) {
+        condVar.notify_one();
+    }
 }
 
 void NesStatistics::nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event){
-    std::cout << "NES-STAT: " << event->toCSV() << std::endl;
+    //std::cout << "NES-STAT: " << event->toCSV() << std::endl;
     std::lock_guard<std::mutex> lock(this->statsMutex);
     std::ofstream outFile("stats-test.csv", std::ios::app);
     if (!outFile.is_open()) {
         std::cout << "Could not open file \n";
         return;
     }
-    outFile << event->toCSV() << "\n";
+    outFile << event->toCSV() << std::endl;
+    outFile.flush();
     outFile.close();
 }
 
