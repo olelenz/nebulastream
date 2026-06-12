@@ -20,4 +20,17 @@ private:
     size_t size;
 };
 
+class NesCompilationTimeEvent : public NesStatisticsEvents{
+public:
+    explicit NesCompilationTimeEvent(int queryId, size_t bufferSize);
+
+    std::string toCSV() const override;
+
+private:
+    int id;
+    size_t size;
+};
+
+// TODO: multiple queues? for different events?
+
 }

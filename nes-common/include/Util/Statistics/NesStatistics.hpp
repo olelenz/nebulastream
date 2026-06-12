@@ -40,13 +40,14 @@ class NesStatistics{
 
         void workStatsQueue();
         void workStatsQueueChunked();
-        std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
+        std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;  // TODO: other queues (folly-mpmc queue) in the system (no locks for us)
         std::condition_variable condVar;
         std::atomic<bool> running{true};
         std::thread workThread;
         std::mutex statsMutex;
-        std::ofstream outFile;
+        std::ofstream outFile;  // TODO: do not write to file, in-memory
 };
+// TODO: Counter event? needed natively? we can just query the statistics??
 
 template<typename EventType, typename... Args>
     void logStat(Args&&... args) {
