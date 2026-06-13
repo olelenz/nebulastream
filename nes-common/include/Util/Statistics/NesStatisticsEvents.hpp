@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <QueryId.hpp>
 #include <chrono>
 
 namespace NES {
@@ -49,6 +50,29 @@ public:
 private:
     int id;
     size_t size;
+};
+
+class NesQueryStartedEvent : public NesStatisticsEvents
+{
+public:
+    explicit NesQueryStartedEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp);
+
+    std::string toCSV() const override;
+
+private:
+    QueryId id;
+    std::chrono::system_clock::time_point timestamp;
+
+};
+
+class NesOperatorInputTuplesEvent : public NesStatisticsEvents
+{
+    public:
+    explicit NesOperatorInputTuplesEvent(int queryId, double executionTimeMs);
+    std::string toCSV() const override;
+
+    private:
+    double executionTimeMs;
 };
 
 // TODO: multiple queues? for different events?

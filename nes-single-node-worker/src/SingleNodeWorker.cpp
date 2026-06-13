@@ -46,6 +46,9 @@
 #include <SingleNodeWorkerConfiguration.hpp>
 #include <WorkerStatus.hpp>
 
+#include <Util/Statistics/NesStatistics.hpp>
+#include <Util/Statistics/NesStatisticsEvents.hpp>
+
 extern void initNetworkServices(const std::string& connectionAddr, const NES::Host& host, const NES::NetworkOptions& options);
 
 namespace NES
@@ -89,6 +92,17 @@ SingleNodeWorker::SingleNodeWorker(const SingleNodeWorkerConfiguration& configur
                 .receiverIOThreads = static_cast<uint32_t>(networkConfig.receiverIOThreads.getValue()),
             });
     }
+
+    auto filePath = "/tmp/nebulastream/nes-statistics.csv";
+
+    std::cout << "Starting statistics collector: "
+              << filePath
+              << std::endl;
+
+    NES::NesStatistics::getInstance().start(
+        NES::StatisticsWorkerType::Chunked,
+        filePath
+    );
 }
 
 std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan plan) noexcept
@@ -134,7 +148,14 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
     CPPTRACE_TRY
     {
         PRECONDITION(queryId != INVALID_QUERY_ID, "QueryId must be not invalid!");
+        auto timestamp = std::chrono::system_clock::now();
+
         nodeEngine->startQuery(queryId);
+
+        NES::logStat<NES::NesQueryStartedEvent>(queryId,timestamp);
+        std::cout << "Logged QueryStartedEvent" << std::endl;
+        NES::NesStatistics::getInstance().shutdown();
+
         return {};
     }
     CPPTRACE_CATCH(...)
