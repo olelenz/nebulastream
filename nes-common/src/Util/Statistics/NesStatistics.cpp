@@ -16,15 +16,21 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
         return;
     }
     running = true;
-    outFile.open(filePath, std::ios::app);
-    if(!outFile.is_open()){
-        std::cout << "Could not open file \n";
-        return;
+    workerType = type;
+    if(type != StatisticsWorkerType::RingBuffer){
+        outFile.open(filePath, std::ios::app);
+        if(!outFile.is_open()){
+            std::cout << "Could not open file \n";
+            return;
+        }
     }
     if(type == StatisticsWorkerType::Buffered){
         workThread = std::thread(&NesStatistics::workStatsQueue, this);
     } else if(type == StatisticsWorkerType::Chunked){
         workThread = std::thread(&NesStatistics::workStatsQueueChunked, this);
+    } else if(type == StatisticsWorkerType::RingBuffer)
+    {
+        workThread = std::thread(&NesStatistics::workStatsRingBuffer, this);
     }
 }
 
@@ -34,7 +40,11 @@ void NesStatistics::shutdown(){
         return;
     }
     running = false;
-    condVar.notify_one();
+    if(workerType == StatisticsWorkerType::RingBuffer){
+        ringBuffer.blockingWrite(nullptr);
+    } else {
+        condVar.notify_one();
+    }
     if (workThread.joinable()) {
         workThread.join();
     }
@@ -47,8 +57,14 @@ void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
     if(!running){
         std::lock_guard<std::mutex> lock(statsMutex);
         if(!running){
-            start(StatisticsWorkerType::Chunked, "nes-stats-default-csv");
+            start(StatisticsWorkerType::RingBuffer, "nes-stats-default-csv");
+            //start(StatisticsWorkerType::Chunked, "nes-stats-default-csv");
         }
+    }
+
+    if(workerType == StatisticsWorkerType::RingBuffer){
+        ringBuffer.blockingWrite(std::move(event));
+        return;
     }
 
     bool wakeUpThread = false;
@@ -124,6 +140,27 @@ void NesStatistics::workStatsQueueChunked() {
         }
     }
     outFile.close();
+}
+
+void NesStatistics::workStatsRingBuffer() {
+    while (true) {
+        std::unique_ptr<NesStatisticsEvents> event;
+        ringBuffer.blockingRead(event);
+        if (!event) {
+            break;
+        }
+        rollingStore.wlock()->push(std::move(event));
+    }
+}
+
+std::string NesStatistics::getStats() const {
+    std::ostringstream oss;
+    rollingStore.rlock()->forEach([&oss](const std::unique_ptr<NesStatisticsEvents>& event) {
+        if (event) {
+            oss << event->toCSV() << '\n';
+        }
+    });
+    return oss.str();
 }
 
 }
