@@ -142,4 +142,98 @@ TEST_F(InternalStatisticsTest, TestReset)
     EXPECT_NE(res2.find("val_3\n"), std::string::npos);
 }
 
+TEST_F(InternalStatisticsTest, TestStopWithoutStart){
+    auto& stats = NesStatistics::getInstance();
+    stats.shutdown();
+}
+
+TEST_F(InternalStatisticsTest, TestConcurrentLogging){
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+
+    const int numThreads = 8;
+    const int eventsPerThread = 10000;
+    std::vector<std::thread> threads;
+    for (int t = 0; t < numThreads; t++)
+    {
+        threads.emplace_back([&stats, t]
+        {
+           for (int i = 0; i < eventsPerThread; i++)
+           {
+               stats.nesStats(std::make_unique<MockStatsEvent>(t*eventsPerThread+i));
+           }
+        });
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
+
+    stats.shutdown();
+    std::string res = stats.getStats();
+
+    int lineCount = 0;
+    std::stringstream ss(res);
+    std::string line;
+    while (std::getline(ss, line))
+    {
+        if (!line.empty())
+        {
+            lineCount++;
+        }
+    }
+    EXPECT_EQ(lineCount, 4096);
+}
+
+TEST_F(InternalStatisticsTest, TestWriteRead)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+    std::atomic<bool> writingDone{false};
+    std::thread reader([&stats, &writingDone]()
+    {
+        while (!writingDone)
+        {
+            std::string curStats = stats.getStats();
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        }
+    });
+    const int numThreads = 4;
+    const int eventsPerThread = 10000;
+    std::vector<std::thread> writers;
+    for (int t = 0; t < numThreads; t++)
+    {
+        writers.emplace_back([&stats, t]()
+        {
+            for (int i = 0; i < eventsPerThread; i++)
+            {
+                stats.nesStats(std::make_unique<MockStatsEvent>(t*eventsPerThread+i));
+            }
+        });
+    }
+
+    for (auto& writer : writers)
+    {
+        writer.join();
+    }
+
+    writingDone = true;
+    reader.join();
+
+    stats.shutdown();
+    std::string res = stats.getStats();
+    int lineCount = 0;
+    std::stringstream ss(res);
+    std::string line;
+    while (std::getline(ss, line))
+    {
+        if (!line.empty())
+        {
+            lineCount++;
+        }
+    }
+    EXPECT_EQ(lineCount, 4096);
+}
+
 }
