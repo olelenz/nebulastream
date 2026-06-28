@@ -39,6 +39,11 @@ void NesStatistics::shutdown(){
     if(!running){
         return;
     }
+
+    if (workerType == StatisticsWorkerType::RingBuffer){
+        std::cout << "\n In Memory Stats \n" << getStats() << "\n";
+    }
+
     running = false;
     if(workerType == StatisticsWorkerType::RingBuffer){
         ringBuffer.blockingWrite(nullptr);
