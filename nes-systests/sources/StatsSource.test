@@ -1,0 +1,15 @@
+# name: sources/StatsSource.test
+# description: Tests the stats source
+# groups: [Sources, Stats]
+
+CREATE LOGICAL SOURCE stats_logical(seq UINT64 NOT NULL, ts UINT64 NOT NULL, queryId UINT64 NOT NULL, metricValue UINT64 NOT NULL, eventType VARSIZED NOT NULL);
+CREATE PHYSICAL SOURCE FOR stats_logical TYPE Stats SET(
+    10 as `SOURCE`.POLL_INTERVAL_MS,
+    1500 AS `SOURCE`.MAX_RUNTIME_MS
+);
+
+CREATE SINK stats_sink(stats_logical.seq UINT64 NOT NULL, stats_logical.ts UINT64 NOT NULL, stats_logical.queryId UINT64 NOT NULL, stats_logical.metricValue UINT64 NOT NULL, stats_logical.eventType VARSIZED NOT NULL) TYPE File;
+
+SELECT * FROM stats_logical INTO stats_sink;
+----
+1 1 1 1 BufferAllocation

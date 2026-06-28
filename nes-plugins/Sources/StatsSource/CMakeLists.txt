@@ -1,0 +1,5 @@
+add_plugin_as_library(Stats Source nes-sources-registry stats_source_plugin_library StatsSource.cpp)
+add_plugin_as_library(Stats SourceValidation nes-sources-registry stats_validation_plugin_library StatsSource.cpp)
+
+target_include_directories(stats_source_plugin_library PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
+target_include_directories(stats_validation_plugin_library PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
