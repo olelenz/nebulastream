@@ -27,12 +27,19 @@ template<typename T, std::size_t N>
 struct CircularBuffer {
     static constexpr std::size_t capacity = N;
 
-    std::array<T, N> slots{};
+    struct Entry
+    {
+        uint64_t seq;
+        T item;
+    };
+
+    std::array<Entry, N> slots{};
     std::size_t head{0};
     std::size_t count{0};
+    uint64_t nextSeq{0};
 
     void push(T&& item) {
-        slots[head] = std::move(item);  // does not copy the data
+        slots[head] = Entry{nextSeq++, std::move(item)};  // does not copy the data
         head = (head + 1) % N;
         count = std::min(count + 1, N);
     }
@@ -41,17 +48,29 @@ struct CircularBuffer {
     void forEach(Fn&& fn) const {
         const std::size_t start = (head + N - count) % N;
         for (std::size_t i = 0; i < count; ++i) {
-            fn(slots[(start + i) % N]);
+            const auto& entry = slots[(start + i) % N];
+            fn(entry.seq, entry.item);
         }
     }
 
     void clear(){
         for(std::size_t i = 0; i < N; i++){
-            slots[i].reset();
+            slots[i].item.reset();
+            slots[i].seq = 0;
         }
         head = 0;
         count = 0;
+        nextSeq = 0;
     }
+};
+
+struct RawEventData
+{
+    uint64_t seq;
+    uint64_t ts;
+    uint64_t queryId;
+    uint64_t metricValue;
+    std::string eventType;
 };
 
 class NesStatistics{
@@ -67,6 +86,7 @@ class NesStatistics{
         void shutdown();
 
         std::string getStats() const;  // only relevant for the ring-buffer mode
+        std::vector<RawEventData> getEventsSince(uint64_t sequenceNumber) const;
 
         // make this a singleton
         NesStatistics(NesStatistics const&) = delete;

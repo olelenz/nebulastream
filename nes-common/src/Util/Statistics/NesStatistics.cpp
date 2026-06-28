@@ -164,12 +164,25 @@ void NesStatistics::workStatsRingBuffer() {
 
 std::string NesStatistics::getStats() const {
     std::ostringstream oss;
-    rollingStore.rlock()->forEach([&oss](const std::unique_ptr<NesStatisticsEvents>& event) {
+    rollingStore.rlock()->forEach([&oss](const uint64_t, const std::unique_ptr<NesStatisticsEvents>& event) {
         if (event) {
             oss << event->toCSV() << '\n';
         }
     });
     return oss.str();
+}
+
+std::vector<RawEventData> NesStatistics::getEventsSince(uint64_t sequenceNumber) const
+{
+    std::vector<RawEventData> events;
+    rollingStore.rlock()->forEach([&events, sequenceNumber](const uint64_t seq, const std::unique_ptr<NesStatisticsEvents>& event)
+    {
+        if (event && seq >= sequenceNumber)
+        {
+            events.push_back({seq, event->getTimestamp(), event->getQueryId(), event->getMetricValue(), event->getEventType()});
+        }
+    });
+    return events;
 }
 
 }
