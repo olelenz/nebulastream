@@ -15,6 +15,10 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
     if(running){
         return;
     }
+
+    // clear previous stores
+    rollingStore.wlock()->clear();
+
     running = true;
     workerType = type;
     if(type != StatisticsWorkerType::RingBuffer){

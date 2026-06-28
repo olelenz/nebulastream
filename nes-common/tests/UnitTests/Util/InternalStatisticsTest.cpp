@@ -34,7 +34,7 @@ class InternalStatisticsTest : public ::testing::Test
 
 };
 
-TEST(InternalStatisticsTest, TestInMemoryLoggingAndRetieval)
+TEST_F(InternalStatisticsTest, TestInMemoryLoggingAndRetieval)
 {
     auto& stats = NesStatistics::getInstance();
     stats.start(StatisticsWorkerType::RingBuffer);
@@ -48,7 +48,7 @@ TEST(InternalStatisticsTest, TestInMemoryLoggingAndRetieval)
     EXPECT_NE(res.find("val_33"), std::string::npos);
 }
 
-TEST(InternalStatisticsTest, TestRollingEviction)
+TEST_F(InternalStatisticsTest, TestRollingEviction)
 {
     auto& stats = NesStatistics::getInstance();
     stats.start(StatisticsWorkerType::RingBuffer);
@@ -73,6 +73,73 @@ TEST(InternalStatisticsTest, TestRollingEviction)
     EXPECT_EQ(lineCount, 4096);
     EXPECT_EQ(res.find("val_0\n"), std::string::npos);
     EXPECT_NE(res.find("val_9999\n"), std::string::npos);
+}
+
+TEST_F(InternalStatisticsTest, TestRollingEvictionBoundary)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+
+    const int totalEvents = 4096;
+    for (int i = 0; i < totalEvents; i++){
+        stats.nesStats(std::make_unique<MockStatsEvent>(i));
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::string res = stats.getStats();
+
+    int lineCount = 0;
+    std::stringstream ss(res);
+    std::string line;
+    while (std::getline(ss, line)){
+        if (!line.empty()){
+            lineCount++;
+        }
+    }
+
+    EXPECT_EQ(lineCount, 4096);
+    EXPECT_NE(res.find("val_0\n"), std::string::npos);
+    EXPECT_NE(res.find("val_4095\n"), std::string::npos);
+    EXPECT_EQ(res.find("val_4096\n"), std::string::npos);
+
+    stats.nesStats(std::make_unique<MockStatsEvent>(totalEvents));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::string res2 = stats.getStats();
+    EXPECT_EQ(res2.find("val_0\n"), std::string::npos);
+    EXPECT_NE(res2.find("val_4095\n"), std::string::npos);
+    EXPECT_NE(res2.find("val_4096\n"), std::string::npos);
+}
+
+TEST_F(InternalStatisticsTest, TestEmptyBuffer)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::string res = stats.getStats();
+    EXPECT_EQ(res, "");
+}
+
+TEST_F(InternalStatisticsTest, TestReset)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+    stats.nesStats(std::make_unique<MockStatsEvent>(0));
+    stats.nesStats(std::make_unique<MockStatsEvent>(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::string res = stats.getStats();
+    EXPECT_NE(res.find("val_0\n"), std::string::npos);
+    EXPECT_NE(res.find("val_1\n"), std::string::npos);
+
+    stats.shutdown();
+    stats.start(StatisticsWorkerType::RingBuffer);
+    stats.nesStats(std::make_unique<MockStatsEvent>(2));
+    stats.nesStats(std::make_unique<MockStatsEvent>(3));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::string res2 = stats.getStats();
+    EXPECT_EQ(res2.find("val_0\n"), std::string::npos);
+    EXPECT_EQ(res2.find("val_1\n"), std::string::npos);
+    EXPECT_NE(res2.find("val_2\n"), std::string::npos);
+    EXPECT_NE(res2.find("val_3\n"), std::string::npos);
 }
 
 }

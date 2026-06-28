@@ -44,6 +44,14 @@ struct CircularBuffer {
             fn(slots[(start + i) % N]);
         }
     }
+
+    void clear(){
+        for(std::size_t i = 0; i < N; i++){
+            slots[i].reset();
+        }
+        head = 0;
+        count = 0;
+    }
 };
 
 class NesStatistics{
