@@ -26,6 +26,9 @@
 
 #include <Identifiers/Identifiers.hpp>
 #include <Runtime/QueryTerminationType.hpp>
+#include <Util/Statistics/NesStatistics.hpp>
+#include <Util/Statistics/NesStatisticsEvents.hpp>
+#include <Util/Statistics/NesResourceUsage.hpp>
 #include <ErrorHandling.hpp>
 #include <QueryStatus.hpp>
 
@@ -72,6 +75,34 @@ bool QueryLog::logQueryFailure(const QueryId queryId, const Exception exception,
 
 bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, const std::chrono::system_clock::time_point timestamp)
 {
+    if (status == QueryStatus::Stopped)
+    {
+        logStat<NesQueryStoppedEvent>(queryId, timestamp);
+        auto& stats = NesStatistics::getInstance();
+        if (const auto stopSnapshot = collectProcessResourceSnapshot(timestamp))
+        {
+            logStat<NesWorkerCpuTimeEvent>(queryId, stopSnapshot->cpuTimeMicros);
+            logStat<NesWorkerMemoryUsageEvent>(queryId, stopSnapshot->residentMemoryKb);
+
+            if (const auto startSnapshot = stats.consumeQueryResourceStart(queryId))
+            {
+                // Approximate worker-level delta only. This is not exact query-exclusive CPU/memory usage,
+                // because multiple queries may execute in the same worker process at the same time.
+                const auto cpuDeltaMicros = stopSnapshot->cpuTimeMicros >= startSnapshot->cpuTimeMicros
+                    ? stopSnapshot->cpuTimeMicros - startSnapshot->cpuTimeMicros
+                    : 0;
+                const auto memoryDeltaKb
+                    = static_cast<int64_t>(stopSnapshot->residentMemoryKb) - static_cast<int64_t>(startSnapshot->residentMemoryKb);
+                logStat<NesQueryResourceDeltaEvent>(
+                    queryId, startSnapshot->timestamp, stopSnapshot->timestamp, cpuDeltaMicros, memoryDeltaKb);
+            }
+        }
+        else
+        {
+            static_cast<void>(stats.consumeQueryResourceStart(queryId));
+        }
+    }
+
     QueryStatusChange statusChange(std::move(status), timestamp);
 
     const auto log = queryStatusLog.wlock();

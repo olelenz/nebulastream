@@ -48,13 +48,16 @@
 
 #include <Util/Statistics/NesStatistics.hpp>
 #include <Util/Statistics/NesStatisticsEvents.hpp>
+#include <Util/Statistics/NesResourceUsage.hpp>
 
 extern void initNetworkServices(const std::string& connectionAddr, const NES::Host& host, const NES::NetworkOptions& options);
 
 namespace NES
 {
-
-SingleNodeWorker::~SingleNodeWorker() = default;
+SingleNodeWorker::~SingleNodeWorker()
+{
+    NES::NesStatistics::getInstance().shutdown();
+};
 SingleNodeWorker::SingleNodeWorker(SingleNodeWorker&& other) noexcept = default;
 SingleNodeWorker& SingleNodeWorker::operator=(SingleNodeWorker&& other) noexcept = default;
 
@@ -127,6 +130,10 @@ std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan pl
         const LogContext context("queryId", plan.getQueryId());
 
         listener->onEvent(SubmitQuerySystemEvent{plan.getQueryId(), explain(plan, ExplainVerbosity::Debug)});
+
+        NES::logStat<NesQueryRegisteredEvent>(plan.getQueryId(), std::chrono::system_clock::now());
+        std::cout << "Logged QueryRegisteredEvent" << std::endl;
+
         const DumpMode dumpMode(
             configuration.workerConfiguration.dumpQueryCompilationIR.getValue(), configuration.workerConfiguration.dumpGraph.getValue());
         auto request = std::make_unique<QueryCompilation::QueryCompilationRequest>(plan);
@@ -153,8 +160,13 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
         nodeEngine->startQuery(queryId);
 
         NES::logStat<NES::NesQueryStartedEvent>(queryId,timestamp);
+        if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
+        {
+            NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);
+            NES::logStat<NES::NesWorkerCpuTimeEvent>(queryId, resourceSnapshot->cpuTimeMicros);
+            NES::logStat<NES::NesWorkerMemoryUsageEvent>(queryId, resourceSnapshot->residentMemoryKb);
+        }
         std::cout << "Logged QueryStartedEvent" << std::endl;
-        NES::NesStatistics::getInstance().shutdown();
 
         return {};
     }

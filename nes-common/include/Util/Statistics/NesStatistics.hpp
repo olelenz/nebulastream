@@ -11,7 +11,10 @@
 #include <sstream>
 #include <folly/MPMCQueue.h>
 #include <folly/Synchronized.h>
+#include <optional>
+#include <unordered_map>
 #include "NesStatisticsEvents.hpp"
+#include "NesResourceUsage.hpp"
 
 // TODO: we should make this fast
 
@@ -84,6 +87,8 @@ class NesStatistics{
         void nesStats(std::unique_ptr<NesStatisticsEvents> event);
         void nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event);
         void shutdown();
+        void recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot);
+        std::optional<QueryResourceSnapshot> consumeQueryResourceStart(QueryId queryId);
 
         std::string getStats() const;  // only relevant for the ring-buffer mode
         std::vector<RawEventData> getEventsSince(uint64_t sequenceNumber) const;
@@ -114,6 +119,9 @@ class NesStatistics{
         std::atomic<bool> running{true};
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
+
+        std::mutex queryResourceSnapshotsMutex;
+        std::unordered_map<QueryId, QueryResourceSnapshot> queryResourceSnapshots;
 };
 // TODO: Counter event? needed natively? we can just query the statistics??
 

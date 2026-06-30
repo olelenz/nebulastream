@@ -13,4 +13,5 @@
 add_source_files(nes-common
         NesStatistics.cpp
         NesStatisticsEvents.cpp
+        NesResourceUsage.cpp
 )

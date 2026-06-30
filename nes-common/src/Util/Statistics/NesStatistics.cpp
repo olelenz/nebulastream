@@ -99,6 +99,25 @@ void NesStatistics::nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event){
     outFile.close();
 }
 
+void NesStatistics::recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot)
+{
+    std::lock_guard<std::mutex> lock(queryResourceSnapshotsMutex);
+    queryResourceSnapshots.insert_or_assign(queryId, snapshot);
+}
+
+std::optional<QueryResourceSnapshot> NesStatistics::consumeQueryResourceStart(QueryId queryId)
+{
+    std::lock_guard<std::mutex> lock(queryResourceSnapshotsMutex);
+    const auto it = queryResourceSnapshots.find(queryId);
+    if (it == queryResourceSnapshots.end())
+    {
+        return std::nullopt;
+    }
+    auto snapshot = it->second;
+    queryResourceSnapshots.erase(it);
+    return snapshot;
+}
+
 void NesStatistics::workStatsQueue(){
     while(running || !statsQueue.empty()){
         std::unique_ptr<NesStatisticsEvents> currentEvent;
