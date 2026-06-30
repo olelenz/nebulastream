@@ -12,12 +12,6 @@ namespace NES
 
 const int NUM_THREADS = 10;
 
-void workerTaskSlow(int threadId, int eventsPerThread) {
-    for (int i = 0; i < eventsPerThread; ++i) {
-        NES::logStatSlow<NES::NesBufferAllocateEvent>(threadId * 10000 + i, 4096);
-    }
-}
-
 void workerTaskAsync(int threadId, int eventsPerThread) {
     for (int i = 0; i < eventsPerThread; ++i) {
         NES::logStat<NES::NesBufferAllocateEvent>(threadId * 10000 + i, 4096);
@@ -58,15 +52,11 @@ void runBenchmark(const std::string& name, int totalEvents, std::function<void(i
 
 TEST(Bench, One){
     std::vector<int> eventCounts = {10, 100, 1000, 10000, 50000, 100000, 250000, 500000};
-    std::ofstream("stats-test-Slow.csv", std::ofstream::trunc).close();
     std::ofstream("stats-test-Buffered.csv", std::ofstream::trunc).close();
-    std::ofstream("stats-test-Chunked.csv", std::ofstream::trunc).close();
 
     std::cout << "Strategy,EventCount,TimeMS" << std::endl;
     for (int count : eventCounts) {
-        runBenchmark("Slow", count, workerTaskSlow, false);
         runBenchmark("Buffered", count, workerTaskAsync, true, NES::StatisticsWorkerType::Buffered);
-        runBenchmark("Chunked", count, workerTaskAsync, true, NES::StatisticsWorkerType::Chunked);
     }
 
     std::cout << "\nComplete. " << std::endl;
