@@ -22,7 +22,6 @@ namespace NES {
 
 enum class StatisticsWorkerType {
     Buffered,
-    Chunked,
     RingBuffer
 };
 
@@ -85,7 +84,6 @@ class NesStatistics{
 
         void start(StatisticsWorkerType type, const std::string& filePath = "");
         void nesStats(std::unique_ptr<NesStatisticsEvents> event);
-        void nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event);
         void shutdown();
         void recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot);
         std::optional<QueryResourceSnapshot> consumeQueryResourceStart(QueryId queryId);
@@ -102,7 +100,6 @@ class NesStatistics{
         ~NesStatistics();
 
         void workStatsQueue();
-        void workStatsQueueChunked();
         void workStatsRingBuffer();
 
         std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
@@ -115,7 +112,7 @@ class NesStatistics{
         static constexpr std::size_t ROLLING_STORE_CAPACITY = 4096;
         folly::Synchronized<CircularBuffer<std::unique_ptr<NesStatisticsEvents>, ROLLING_STORE_CAPACITY>> rollingStore;
 
-        StatisticsWorkerType workerType{StatisticsWorkerType::Chunked};
+        StatisticsWorkerType workerType{StatisticsWorkerType::RingBuffer};
         std::atomic<bool> running{true};
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
@@ -128,12 +125,6 @@ class NesStatistics{
 template<typename EventType, typename... Args>
     void logStat(Args&&... args) {
     NesStatistics::getInstance().nesStats(
-        std::make_unique<EventType>(std::forward<Args>(args)...)
-    );
-}
-template<typename EventType, typename... Args>
-    void logStatSlow(Args&&... args) {
-    NesStatistics::getInstance().nesStatsSlow(
         std::make_unique<EventType>(std::forward<Args>(args)...)
     );
 }

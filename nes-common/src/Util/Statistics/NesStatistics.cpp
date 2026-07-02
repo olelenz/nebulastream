@@ -21,19 +21,14 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
 
     running = true;
     workerType = type;
-    if(type != StatisticsWorkerType::RingBuffer){
+    if(type == StatisticsWorkerType::Buffered){
         outFile.open(filePath, std::ios::app);
         if(!outFile.is_open()){
             std::cout << "Could not open file \n";
             return;
         }
-    }
-    if(type == StatisticsWorkerType::Buffered){
         workThread = std::thread(&NesStatistics::workStatsQueue, this);
-    } else if(type == StatisticsWorkerType::Chunked){
-        workThread = std::thread(&NesStatistics::workStatsQueueChunked, this);
-    } else if(type == StatisticsWorkerType::RingBuffer)
-    {
+    } else if(type == StatisticsWorkerType::RingBuffer) {
         workThread = std::thread(&NesStatistics::workStatsRingBuffer, this);
     }
 }
@@ -42,10 +37,6 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
 void NesStatistics::shutdown(){
     if(!running){
         return;
-    }
-
-    if (workerType == StatisticsWorkerType::RingBuffer){
-        std::cout << "\n In Memory Stats \n" << getStats() << "\n";
     }
 
     running = false;
@@ -63,14 +54,6 @@ void NesStatistics::shutdown(){
 }
 
 void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
-    if(!running){
-        std::lock_guard<std::mutex> lock(statsMutex);
-        if(!running){
-            start(StatisticsWorkerType::RingBuffer, "nes-stats-default-csv");
-            //start(StatisticsWorkerType::Chunked, "nes-stats-default-csv");
-        }
-    }
-
     if(workerType == StatisticsWorkerType::RingBuffer){
         ringBuffer.blockingWrite(std::move(event));
         return;
@@ -87,17 +70,6 @@ void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
     }
 }
 
-void NesStatistics::nesStatsSlow(std::unique_ptr<NesStatisticsEvents> event){
-    std::lock_guard<std::mutex> lock(this->statsMutex);
-    std::ofstream outFile("stats-test-slow.csv", std::ios::app);
-    if (!outFile.is_open()) {
-        std::cout << "Could not open file \n";
-        return;
-    }
-    outFile << event->toCSV() << std::endl;
-    outFile.flush();
-    outFile.close();
-}
 
 void NesStatistics::recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot)
 {
@@ -138,36 +110,6 @@ void NesStatistics::workStatsQueue(){
     }
     outFile.close();
 
-}
-void NesStatistics::workStatsQueueChunked() {
-    const int CHUNK_SIZE = 1000;
-    std::vector<std::unique_ptr<NesStatisticsEvents>> batch;
-    batch.reserve(CHUNK_SIZE);
-
-    while (running || !statsQueue.empty()) {
-        {
-            std::unique_lock<std::mutex> lock(statsMutex);
-            condVar.wait(lock, [this]() {
-                return !statsQueue.empty() || !running;
-            });
-
-            int count = 0;
-            while (!statsQueue.empty() && count < CHUNK_SIZE) {
-                batch.push_back(std::move(statsQueue.front()));
-                statsQueue.pop();
-                count++;
-            }
-        }
-
-        if(!batch.empty()){
-            for (const auto& event : batch) {
-                outFile << event->toCSV() << "\n";
-            }
-            outFile.flush();
-            batch.clear();
-        }
-    }
-    outFile.close();
 }
 
 void NesStatistics::workStatsRingBuffer() {
