@@ -1,0 +1,32 @@
+# name: sources/StatsSourcePeriodicResourceSampling.test
+# description: Tests that periodic worker CPU and memory samples are visible through StatsSource
+# groups: [Sources, Stats]
+
+CREATE LOGICAL SOURCE stats_periodic_logical(
+    seq UINT64 NOT NULL,
+    ts UINT64 NOT NULL,
+    queryId UINT64 NOT NULL,
+    metricValue UINT64 NOT NULL,
+    eventType VARSIZED NOT NULL
+);
+
+CREATE PHYSICAL SOURCE FOR stats_periodic_logical TYPE Stats SET(
+    10 AS `SOURCE`.POLL_INTERVAL_MS,
+    4000 AS `SOURCE`.MAX_RUNTIME_MS
+);
+
+CREATE SINK stats_periodic_sink(
+    stats_periodic_logical.seq UINT64 NOT NULL,
+    stats_periodic_logical.ts UINT64 NOT NULL,
+    stats_periodic_logical.queryId UINT64 NOT NULL,
+    stats_periodic_logical.metricValue UINT64 NOT NULL,
+    stats_periodic_logical.eventType VARSIZED NOT NULL
+) TYPE File;
+
+SELECT *
+FROM stats_periodic_logical
+WHERE eventType == VARSIZED("WorkerCpuTimeMicros")
+   OR eventType == VARSIZED("WorkerMemoryRssKb")
+INTO stats_periodic_sink;
+----
+
