@@ -103,7 +103,7 @@ SingleNodeWorker::SingleNodeWorker(const SingleNodeWorkerConfiguration& configur
               << std::endl;
 
     NES::NesStatistics::getInstance().start(
-        NES::StatisticsWorkerType::Chunked,
+        NES::StatisticsWorkerType::RingBuffer,
         filePath
     );
 }

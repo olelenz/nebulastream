@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <fstream>
 #include <memory>
@@ -101,6 +102,9 @@ class NesStatistics{
 
         void workStatsQueue();
         void workStatsRingBuffer();
+        void startResourceSampler();
+        void stopResourceSampler();
+        void sampleResourceUsagePeriodically();
 
         std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
         std::condition_variable condVar;
@@ -116,6 +120,11 @@ class NesStatistics{
         std::atomic<bool> running{true};
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
+
+        static constexpr std::chrono::milliseconds DEFAULT_RESOURCE_SAMPLE_INTERVAL{1000};
+        std::thread resourceSamplerThread;
+        std::condition_variable resourceSamplerCondVar;
+        std::mutex resourceSamplerMutex;
 
         std::mutex queryResourceSnapshotsMutex;
         std::unordered_map<QueryId, QueryResourceSnapshot> queryResourceSnapshots;

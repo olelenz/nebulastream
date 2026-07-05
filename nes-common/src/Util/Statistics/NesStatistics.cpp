@@ -1,4 +1,5 @@
 #include <Util/Statistics/NesStatistics.hpp>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -30,6 +31,7 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
         workThread = std::thread(&NesStatistics::workStatsQueue, this);
     } else if(type == StatisticsWorkerType::RingBuffer) {
         workThread = std::thread(&NesStatistics::workStatsRingBuffer, this);
+        startResourceSampler();
     }
 }
 
@@ -40,6 +42,7 @@ void NesStatistics::shutdown(){
     }
 
     running = false;
+    stopResourceSampler();
     if(workerType == StatisticsWorkerType::RingBuffer){
         ringBuffer.blockingWrite(nullptr);
     } else {
@@ -88,6 +91,45 @@ std::optional<QueryResourceSnapshot> NesStatistics::consumeQueryResourceStart(Qu
     auto snapshot = it->second;
     queryResourceSnapshots.erase(it);
     return snapshot;
+}
+
+void NesStatistics::startResourceSampler()
+{
+    if (resourceSamplerThread.joinable())
+    {
+        return;
+    }
+    resourceSamplerThread = std::thread(&NesStatistics::sampleResourceUsagePeriodically, this);
+}
+
+void NesStatistics::stopResourceSampler()
+{
+    resourceSamplerCondVar.notify_one();
+    if (resourceSamplerThread.joinable())
+    {
+        resourceSamplerThread.join();
+    }
+}
+
+void NesStatistics::sampleResourceUsagePeriodically()
+{
+    std::unique_lock lock(resourceSamplerMutex);
+    while (running.load())
+    {
+        if (resourceSamplerCondVar.wait_for(lock, DEFAULT_RESOURCE_SAMPLE_INTERVAL, [this] { return !running.load(); }))
+        {
+            break;
+        }
+
+        lock.unlock();
+        const auto timestamp = std::chrono::system_clock::now();
+        if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
+        {
+            nesStats(std::make_unique<NesWorkerCpuTimeEvent>(INVALID_QUERY_ID, resourceSnapshot->cpuTimeMicros));
+            nesStats(std::make_unique<NesWorkerMemoryUsageEvent>(INVALID_QUERY_ID, resourceSnapshot->residentMemoryKb));
+        }
+        lock.lock();
+    }
 }
 
 void NesStatistics::workStatsQueue(){
