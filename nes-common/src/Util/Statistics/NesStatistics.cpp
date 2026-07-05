@@ -93,6 +93,18 @@ std::optional<QueryResourceSnapshot> NesStatistics::consumeQueryResourceStart(Qu
     return snapshot;
 }
 
+void NesStatistics::setActiveQueryCountProvider(std::function<uint64_t()> provider)
+{
+    std::lock_guard<std::mutex> lock(activeQueryCountProviderMutex);
+    activeQueryCountProvider = std::move(provider);
+}
+
+void NesStatistics::setWorkerBufferUsageProvider(std::function<WorkerBufferUsageSnapshot()> provider)
+{
+    std::lock_guard<std::mutex> lock(workerBufferUsageProviderMutex);
+    workerBufferUsageProvider = std::move(provider);
+}
+
 void NesStatistics::startResourceSampler()
 {
     if (resourceSamplerThread.joinable())
@@ -127,6 +139,28 @@ void NesStatistics::sampleResourceUsagePeriodically()
         {
             nesStats(std::make_unique<NesWorkerCpuTimeEvent>(INVALID_QUERY_ID, resourceSnapshot->cpuTimeMicros));
             nesStats(std::make_unique<NesWorkerMemoryUsageEvent>(INVALID_QUERY_ID, resourceSnapshot->residentMemoryKb));
+        }
+        std::function<uint64_t()> activeQueryCountProviderCopy;
+        {
+            std::lock_guard<std::mutex> providerLock(activeQueryCountProviderMutex);
+            activeQueryCountProviderCopy = activeQueryCountProvider;
+        }
+        if (activeQueryCountProviderCopy)
+        {
+            nesStats(std::make_unique<NesWorkerActiveQueryCountEvent>(INVALID_QUERY_ID, activeQueryCountProviderCopy()));
+        }
+        std::function<WorkerBufferUsageSnapshot()> workerBufferUsageProviderCopy;
+        {
+            std::lock_guard<std::mutex> providerLock(workerBufferUsageProviderMutex);
+            workerBufferUsageProviderCopy = workerBufferUsageProvider;
+        }
+        if (workerBufferUsageProviderCopy)
+        {
+            const auto bufferUsage = workerBufferUsageProviderCopy();
+            nesStats(std::make_unique<NesWorkerBufferTotalCountEvent>(INVALID_QUERY_ID, bufferUsage.totalCount));
+            nesStats(std::make_unique<NesWorkerBufferAvailableCountEvent>(INVALID_QUERY_ID, bufferUsage.availableCount));
+            nesStats(std::make_unique<NesWorkerBufferUsedCountEvent>(INVALID_QUERY_ID, bufferUsage.usedCount));
+            nesStats(std::make_unique<NesWorkerBufferUsedBytesEvent>(INVALID_QUERY_ID, bufferUsage.usedBytes));
         }
         lock.lock();
     }

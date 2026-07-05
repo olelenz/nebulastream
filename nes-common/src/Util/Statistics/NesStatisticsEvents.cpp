@@ -52,6 +52,41 @@ std::string NesWorkerMemoryUsageEvent::toCSV() const
     return "WorkerMemoryRssKb ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(residentMemoryKb);
 }
 
+NesWorkerActiveQueryCountEvent::NesWorkerActiveQueryCountEvent(QueryId queryId, uint64_t activeQueryCount)
+    : id(queryId), activeQueryCount(activeQueryCount) {};
+std::string NesWorkerActiveQueryCountEvent::toCSV() const
+{
+    return "WorkerActiveQueryCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(activeQueryCount);
+}
+
+NesWorkerBufferTotalCountEvent::NesWorkerBufferTotalCountEvent(QueryId queryId, uint64_t bufferTotalCount)
+    : id(queryId), bufferTotalCount(bufferTotalCount) {};
+std::string NesWorkerBufferTotalCountEvent::toCSV() const
+{
+    return "WorkerBufferTotalCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferTotalCount);
+}
+
+NesWorkerBufferAvailableCountEvent::NesWorkerBufferAvailableCountEvent(QueryId queryId, uint64_t bufferAvailableCount)
+    : id(queryId), bufferAvailableCount(bufferAvailableCount) {};
+std::string NesWorkerBufferAvailableCountEvent::toCSV() const
+{
+    return "WorkerBufferAvailableCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferAvailableCount);
+}
+
+NesWorkerBufferUsedCountEvent::NesWorkerBufferUsedCountEvent(QueryId queryId, uint64_t bufferUsedCount)
+    : id(queryId), bufferUsedCount(bufferUsedCount) {};
+std::string NesWorkerBufferUsedCountEvent::toCSV() const
+{
+    return "WorkerBufferUsedCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferUsedCount);
+}
+
+NesWorkerBufferUsedBytesEvent::NesWorkerBufferUsedBytesEvent(QueryId queryId, uint64_t bufferUsedBytes)
+    : id(queryId), bufferUsedBytes(bufferUsedBytes) {};
+std::string NesWorkerBufferUsedBytesEvent::toCSV() const
+{
+    return "WorkerBufferUsedBytes ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferUsedBytes);
+}
+
 NesQueryResourceDeltaEvent::NesQueryResourceDeltaEvent(
     QueryId queryId,
     std::chrono::system_clock::time_point startTimestamp,

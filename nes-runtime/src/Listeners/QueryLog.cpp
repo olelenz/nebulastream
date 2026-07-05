@@ -68,6 +68,7 @@ bool QueryLog::logQueryFailure(const QueryId queryId, const Exception exception,
             statusChange,
             [](const QueryStatusChange& lhs, const QueryStatusChange& rhs) { return lhs.timestamp < rhs.timestamp; });
         changes.emplace(pos, std::move(statusChange));
+        logStat<NesQueryFailedEvent>(queryId, exception);
         return true;
     }
     return false;

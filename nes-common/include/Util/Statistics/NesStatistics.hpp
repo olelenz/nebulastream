@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -76,6 +77,14 @@ struct RawEventData
     std::string eventType;
 };
 
+struct WorkerBufferUsageSnapshot
+{
+    uint64_t totalCount;
+    uint64_t availableCount;
+    uint64_t usedCount;
+    uint64_t usedBytes;
+};
+
 class NesStatistics{
     public:
         static NesStatistics& getInstance(){
@@ -88,6 +97,8 @@ class NesStatistics{
         void shutdown();
         void recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot);
         std::optional<QueryResourceSnapshot> consumeQueryResourceStart(QueryId queryId);
+        void setActiveQueryCountProvider(std::function<uint64_t()> provider);
+        void setWorkerBufferUsageProvider(std::function<WorkerBufferUsageSnapshot()> provider);
 
         std::string getStats() const;  // only relevant for the ring-buffer mode
         std::vector<RawEventData> getEventsSince(uint64_t sequenceNumber) const;
@@ -128,6 +139,12 @@ class NesStatistics{
 
         std::mutex queryResourceSnapshotsMutex;
         std::unordered_map<QueryId, QueryResourceSnapshot> queryResourceSnapshots;
+
+        std::mutex activeQueryCountProviderMutex;
+        std::function<uint64_t()> activeQueryCountProvider;
+
+        std::mutex workerBufferUsageProviderMutex;
+        std::function<WorkerBufferUsageSnapshot()> workerBufferUsageProvider;
 };
 // TODO: Counter event? needed natively? we can just query the statistics??
 
