@@ -1,8 +1,6 @@
 #pragma once
 #include <atomic>
-#include <chrono>
 #include <condition_variable>
-#include <functional>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -10,11 +8,12 @@
 #include <string>
 #include <thread>
 #include <array>
-#include <sstream>
 #include <folly/MPMCQueue.h>
 #include <folly/Synchronized.h>
 #include <optional>
 #include <unordered_map>
+#include <chrono>
+#include <functional>
 #include "NesStatisticsEvents.hpp"
 #include "NesResourceUsage.hpp"
 

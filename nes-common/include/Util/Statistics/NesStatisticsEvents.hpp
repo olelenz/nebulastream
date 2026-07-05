@@ -1,21 +1,11 @@
 #pragma once
 #include <chrono>
-#include <cstdint>
 #include <exception>
 #include <functional>
 #include <string>
 #include <QueryId.hpp>
-#include <chrono>
 
 namespace NES {
-
-// TBD: Do we need to classify metric type
-enum class NesMetricType {
-    Counter,
-    Gauge,
-    Histogram,
-    Meter
-};
 
 // Convert QueryId to uint64_t to match the flattened StatsSource schema.
 inline uint64_t getFlattenedQueryId(const QueryId queryId)

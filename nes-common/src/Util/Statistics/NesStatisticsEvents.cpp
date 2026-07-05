@@ -100,14 +100,5 @@ NesQueryResourceDeltaEvent::NesQueryResourceDeltaEvent(
     , memoryDeltaKb(memoryDeltaKb)
 {
 }
-std::string NesQueryResourceDeltaEvent::toCSV() const
-{
-    const auto startMs = std::chrono::duration_cast<std::chrono::milliseconds>(startTimestamp.time_since_epoch()).count();
-    const auto stopMs = std::chrono::duration_cast<std::chrono::milliseconds>(stopTimestamp.time_since_epoch()).count();
-    return "QueryResourceDelta ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(startMs) + "," + std::to_string(stopMs)
-        + "," + std::to_string(cpuDeltaMicros) + "," + std::to_string(memoryDeltaKb);
-}
-
-
 
 }
