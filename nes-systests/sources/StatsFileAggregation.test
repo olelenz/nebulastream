@@ -1,0 +1,47 @@
+# name: sources/StatsFileAggregation.test
+# description: Reads CSV-formatted internal-statistics events from a File source and aggregates them.
+#   The schema (seq, ts, queryId, metricValue, eventType) mirrors the CSV rows StatsSource::fillTupleBuffer
+#   already produces from the in-memory ring buffer (seq,ts,queryId,metricValue,eventType per line).
+#   Once NesStatisticsEvents::toCSV() is fixed to emit real comma-separated fields instead of
+#   "<EventType> <id> : <value>", the on-disk stats file could be read the same way via ATTACH FILE.
+# groups: [Sources, Aggregation]
+
+CREATE LOGICAL SOURCE statsEvents(seq UINT64 NOT NULL, ts UINT64 NOT NULL, queryId UINT64 NOT NULL, metricValue UINT64 NOT NULL, eventType VARSIZED NOT NULL);
+CREATE PHYSICAL SOURCE FOR statsEvents TYPE File;
+ATTACH INLINE
+1,0,42,1024,BufferAllocation
+2,50,42,2048,BufferAllocation
+3,100,42,150,CompilationTime
+4,300,7,4096,BufferAllocation
+5,350,7,300,CompilationTime
+6,450,7,500,CompilationTime
+7,520,42,777,BufferAllocation
+8,600,7,900,BufferAllocation
+
+CREATE SINK totalByEventType(statsEvents.start UINT64 NOT NULL, statsEvents.end UINT64 NOT NULL, statsEvents.eventType VARSIZED NOT NULL, statsEvents.totalMetricValue UINT64 NOT NULL) TYPE File;
+
+# Total metric value per event type, per 500ms tumbling window
+SELECT start, end, eventType, SUM(metricValue) AS totalMetricValue
+FROM statsEvents
+GROUP BY (eventType)
+WINDOW TUMBLING(ts, size 500 ms)
+INTO totalByEventType;
+----
+0,500,BufferAllocation,7168
+0,500,CompilationTime,950
+500,1000,BufferAllocation,1677
+
+
+CREATE SINK totalByQuery(statsEvents.start UINT64 NOT NULL, statsEvents.end UINT64 NOT NULL, statsEvents.queryId UINT64 NOT NULL, statsEvents.totalMetricValue UINT64 NOT NULL) TYPE File;
+
+# Total metric value per queryId, per 500ms tumbling window
+SELECT start, end, queryId, SUM(metricValue) AS totalMetricValue
+FROM statsEvents
+GROUP BY (queryId)
+WINDOW TUMBLING(ts, size 500 ms)
+INTO totalByQuery;
+----
+0,500,42,3222
+0,500,7,4896
+500,1000,42,777
+500,1000,7,900
