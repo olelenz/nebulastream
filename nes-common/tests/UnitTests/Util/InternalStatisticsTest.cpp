@@ -265,7 +265,7 @@ TEST_F(InternalStatisticsTest, TestGetEventsSince)
 
     std::vector<RawEventData> partialEvents = stats.getEventsSince(3);
     ASSERT_EQ(partialEvents.size(), 2);
-    
+
     EXPECT_EQ(partialEvents[0].seq, 3);
     EXPECT_EQ(partialEvents[0].metricValue, 3);
 
@@ -274,6 +274,70 @@ TEST_F(InternalStatisticsTest, TestGetEventsSince)
 
     std::vector<RawEventData> emptyEvents = stats.getEventsSince(10);
     EXPECT_TRUE(emptyEvents.empty());
+}
+
+TEST_F(InternalStatisticsTest, TestLogStatMultipleTypes)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+
+    logStat<NesBufferAllocateEvent>(13, 1024);
+    logStat<NesCompilationTimeEvent>(14, 500);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    stats.shutdown();
+
+    auto events = stats.getEventsSince(0);
+    ASSERT_EQ(events.size(), 2);
+
+    bool foundBuffer = false, foundCompile = false;
+    for (const auto& e : events) {
+        if (e.eventType == "BufferAllocation") { foundBuffer = true; EXPECT_EQ(e.queryId, 13); EXPECT_EQ(e.metricValue, 1024); }
+        if (e.eventType == "CompilationTime")  { foundCompile = true; EXPECT_EQ(e.queryId, 14);  EXPECT_EQ(e.metricValue, 500);  }
+    }
+    EXPECT_TRUE(foundBuffer);
+    EXPECT_TRUE(foundCompile);
+}
+
+TEST_F(InternalStatisticsTest, TestMixedEventTypesRouteCorrectly)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+
+    const int n = 50;
+    for (int i = 0; i < n; i++) {
+        logStat<NesBufferAllocateEvent>(i, static_cast<size_t>(i) * 2);
+        logStat<NesCompilationTimeEvent>(i, static_cast<size_t>(i) * 3);
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    stats.shutdown();
+
+    auto events = stats.getEventsSince(0);
+    ASSERT_EQ(events.size(), static_cast<size_t>(n * 2));
+
+    int bufferCount = 0, compileCount = 0;
+    for (const auto& e : events) {
+        if (e.eventType == "BufferAllocation") bufferCount++;
+        if (e.eventType == "CompilationTime")  compileCount++;
+    }
+    EXPECT_EQ(bufferCount, n);
+    EXPECT_EQ(compileCount, n);
+}
+
+TEST_F(InternalStatisticsTest, TestShutdownDoesNotDropEvents)
+{
+    auto& stats = NesStatistics::getInstance();
+    stats.start(StatisticsWorkerType::RingBuffer);
+
+    const int n = 200;
+    for (int i = 0; i < n; i++) {
+        logStat<NesBufferAllocateEvent>(i, 64);
+    }
+    stats.shutdown();
+
+    auto events = stats.getEventsSince(0);
+    EXPECT_EQ(static_cast<int>(events.size()), n);
 }
 
 }

@@ -4,6 +4,13 @@
 
 namespace NES {
 
+enum class EventTypeIndex : uint8_t {
+    BufferAlloc    = 0,
+    CompilationTime = 1,
+    Other          = 2,
+    COUNT
+};
+
 class NesStatisticsEvents{
 public:
     NesStatisticsEvents()
@@ -17,6 +24,7 @@ public:
     virtual std::string getEventType() const = 0;
     virtual uint64_t getQueryId() const = 0;
     virtual uint64_t getMetricValue() const = 0;
+    virtual EventTypeIndex getTypeIndex() const { return EventTypeIndex::Other; }
     uint64_t getTimestamp() const { return timestamp; }
 private:
     uint64_t timestamp;
@@ -24,6 +32,8 @@ private:
 
 class NesBufferAllocateEvent : public NesStatisticsEvents{
 public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferAlloc;
+
     explicit NesBufferAllocateEvent(int queryId, size_t bufferSize);
 
     std::string toCSV() const override;
@@ -31,6 +41,7 @@ public:
     std::string getEventType() const override {return "BufferAllocation";};
     uint64_t getQueryId() const override {return id;}
     uint64_t getMetricValue() const override {return size;}
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     int id;
@@ -39,18 +50,20 @@ private:
 
 class NesCompilationTimeEvent : public NesStatisticsEvents{
 public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::CompilationTime;
+
     explicit NesCompilationTimeEvent(int queryId, size_t bufferSize);
 
     std::string toCSV() const override;
     std::string getEventType() const override {return "CompilationTime";};
     uint64_t getQueryId() const override {return id;}
     uint64_t getMetricValue() const override {return size;}
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     int id;
     size_t size;
 };
 
-// TODO: multiple queues? for different events?
 
 }

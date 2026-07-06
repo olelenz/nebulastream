@@ -1,4 +1,5 @@
 #include <Util/Statistics/NesStatistics.hpp>
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -7,7 +8,12 @@
 
 namespace NES {
 
-NesStatistics::NesStatistics() : running(false){}
+NesStatistics::NesStatistics() : running(false) {
+    ringBuffers.reserve(NUM_EVENT_TYPES);
+    for (std::size_t i = 0; i < NUM_EVENT_TYPES; ++i) {
+        ringBuffers.emplace_back(RING_BUFFER_CAPACITY);
+    }
+}
 NesStatistics::~NesStatistics() {
     shutdown();
 }
@@ -41,7 +47,7 @@ void NesStatistics::shutdown(){
 
     running = false;
     if(workerType == StatisticsWorkerType::RingBuffer){
-        ringBuffer.blockingWrite(nullptr);
+        ringBufferSem.release();
     } else {
         condVar.notify_one();
     }
@@ -55,7 +61,28 @@ void NesStatistics::shutdown(){
 
 void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
     if(workerType == StatisticsWorkerType::RingBuffer){
-        ringBuffer.blockingWrite(std::move(event));
+        const std::size_t idx = static_cast<std::size_t>(event->getTypeIndex());
+        ringBuffers[idx].blockingWrite(std::move(event));
+        ringBufferSem.release();
+        return;
+    }
+
+    bool wakeUpThread = false;
+    {
+        std::lock_guard<std::mutex> lock(statsMutex);
+        wakeUpThread = statsQueue.empty();
+        statsQueue.push(std::move(event));
+    }
+    if (wakeUpThread) {
+        condVar.notify_one();
+    }
+}
+
+void NesStatistics::nesStatsDirect(std::size_t queueIdx, std::unique_ptr<NesStatisticsEvents> event){
+    assert(queueIdx < ringBuffers.size() && "queueIdx out of range");
+    if(workerType == StatisticsWorkerType::RingBuffer){
+        ringBuffers[queueIdx].blockingWrite(std::move(event));
+        ringBufferSem.release();
         return;
     }
 
@@ -95,12 +122,34 @@ void NesStatistics::workStatsQueue(){
 
 void NesStatistics::workStatsRingBuffer() {
     while (true) {
-        std::unique_ptr<NesStatisticsEvents> event;
-        ringBuffer.blockingRead(event);
-        if (!event) {
+        ringBufferSem.acquire();
+
+        for (auto& q : ringBuffers) {
+            std::unique_ptr<NesStatisticsEvents> event;
+            while (q.read(event)) {
+                if (event) {
+                    rollingStore.wlock()->push(std::move(event));
+                }
+            }
+        }
+
+        // drain the queues on shutdown
+        if (!running) {
+            bool any = true;
+            while (any) {
+                any = false;
+                for (auto& q : ringBuffers) {
+                    std::unique_ptr<NesStatisticsEvents> event;
+                    while (q.read(event)) {
+                        any = true;
+                        if (event) {
+                            rollingStore.wlock()->push(std::move(event));
+                        }
+                    }
+                }
+            }
             break;
         }
-        rollingStore.wlock()->push(std::move(event));
     }
 }
 
