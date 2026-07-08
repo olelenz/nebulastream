@@ -116,6 +116,7 @@ class NesStatistics{
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
 };
+#if defined(NES_STATISTICS_ENABLED)
 
 template<typename EventType, typename... Args>
 void logStat(Args&&... args) {
@@ -131,4 +132,15 @@ void logStat(Args&&... args) {
     );
 }
 
-}
+// NES_LOG_STAT(NesBufferAllocateEvent, 0, size) expands to:
+//   ::NES::logStat<::NES::NesBufferAllocateEvent>(0, size)
+#define NES_LOG_STAT(EventType, ...) ::NES::logStat<::NES::EventType>(__VA_ARGS__)
+
+#else // NES_STATISTICS_ENABLED not defined
+
+// stats are not compiled
+#define NES_LOG_STAT(EventType, ...) do {} while (0)
+
+#endif // NES_STATISTICS_ENABLED
+
+} // namespace NES

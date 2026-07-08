@@ -281,8 +281,8 @@ TEST_F(InternalStatisticsTest, TestLogStatMultipleTypes)
     auto& stats = NesStatistics::getInstance();
     stats.start(StatisticsWorkerType::RingBuffer);
 
-    logStat<NesBufferAllocateEvent>(13, 1024);
-    logStat<NesCompilationTimeEvent>(14, 500);
+    NES_LOG_STAT(NesBufferAllocateEvent, 13, 1024);
+    NES_LOG_STAT(NesCompilationTimeEvent, 14, 500);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     stats.shutdown();
@@ -306,8 +306,8 @@ TEST_F(InternalStatisticsTest, TestMixedEventTypesRouteCorrectly)
 
     const int n = 50;
     for (int i = 0; i < n; i++) {
-        logStat<NesBufferAllocateEvent>(i, static_cast<size_t>(i) * 2);
-        logStat<NesCompilationTimeEvent>(i, static_cast<size_t>(i) * 3);
+        NES_LOG_STAT(NesBufferAllocateEvent, i, static_cast<size_t>(i) * 2);
+        NES_LOG_STAT(NesCompilationTimeEvent, i, static_cast<size_t>(i) * 3);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -332,7 +332,7 @@ TEST_F(InternalStatisticsTest, TestShutdownDoesNotDropEvents)
 
     const int n = 200;
     for (int i = 0; i < n; i++) {
-        logStat<NesBufferAllocateEvent>(i, 64);
+        NES_LOG_STAT(NesBufferAllocateEvent, i, 64);
     }
     stats.shutdown();
 

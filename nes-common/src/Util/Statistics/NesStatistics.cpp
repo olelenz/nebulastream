@@ -13,6 +13,7 @@ NesStatistics::NesStatistics() : running(false) {
     for (std::size_t i = 0; i < NUM_EVENT_TYPES; ++i) {
         ringBuffers.emplace_back(RING_BUFFER_CAPACITY);
     }
+    start(StatisticsWorkerType::RingBuffer);
 }
 NesStatistics::~NesStatistics() {
     shutdown();
