@@ -55,10 +55,7 @@ extern void initNetworkServices(const std::string& connectionAddr, const NES::Ho
 
 namespace NES
 {
-SingleNodeWorker::~SingleNodeWorker()
-{
-    NES::NesStatistics::getInstance().shutdown();
-};
+SingleNodeWorker::~SingleNodeWorker() = default;
 SingleNodeWorker::SingleNodeWorker(SingleNodeWorker&& other) noexcept = default;
 SingleNodeWorker& SingleNodeWorker::operator=(SingleNodeWorker&& other) noexcept = default;
 
@@ -194,15 +191,13 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
         PRECONDITION(queryId != INVALID_QUERY_ID, "QueryId must be not invalid!");
         auto timestamp = std::chrono::system_clock::now();
 
-        nodeEngine->startQuery(queryId);
-
         NES::logStat<NES::NesQueryStartedEvent>(queryId);
         if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
         {
             NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);
-            NES::logStat<NES::NesWorkerCpuTimeEvent>(queryId, resourceSnapshot->cpuTimeMicros);
-            NES::logStat<NES::NesWorkerMemoryUsageEvent>(queryId, resourceSnapshot->residentMemoryKb);
         }
+
+        nodeEngine->startQuery(queryId);
 
         return {};
     }

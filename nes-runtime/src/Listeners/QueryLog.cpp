@@ -82,13 +82,10 @@ bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, c
         auto& stats = NesStatistics::getInstance();
         if (const auto stopSnapshot = collectProcessResourceSnapshot(timestamp))
         {
-            logStat<NesWorkerCpuTimeEvent>(queryId, stopSnapshot->cpuTimeMicros);
-            logStat<NesWorkerMemoryUsageEvent>(queryId, stopSnapshot->residentMemoryKb);
-
             if (const auto startSnapshot = stats.consumeQueryResourceStart(queryId))
             {
-                // Approximate worker-level delta only. This is not exact query-exclusive CPU/memory usage,
-                // because multiple queries may execute in the same worker process at the same time.
+                // Approximate process-level delta between query start and stop snapshots. This is not
+                // exact query-exclusive CPU/memory usage when multiple queries share the worker process.
                 const auto cpuDeltaMicros = stopSnapshot->cpuTimeMicros >= startSnapshot->cpuTimeMicros
                     ? stopSnapshot->cpuTimeMicros - startSnapshot->cpuTimeMicros
                     : 0;
