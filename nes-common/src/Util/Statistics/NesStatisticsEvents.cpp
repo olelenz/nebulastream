@@ -1,6 +1,8 @@
 #include <Util/Statistics/NesStatisticsEvents.hpp>
 #include <QueryId.hpp>
 
+#include <utility>
+
 namespace NES {
 
 NesBufferAllocateEvent::NesBufferAllocateEvent(int queryId, size_t bufferSize) : id(queryId), size(bufferSize){};
@@ -10,33 +12,28 @@ std::string NesBufferAllocateEvent::toCSV() const {
 }
 
 // Query level events
-NesQueryStartedEvent::NesQueryStartedEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp) : id(queryId), timestamp(timestamp) {};
+NesQueryStartedEvent::NesQueryStartedEvent(QueryId queryId) : id(queryId) {};
 std::string NesQueryStartedEvent::toCSV() const {
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-         timestamp.time_since_epoch()
-     ).count();
-    return "QueryStarted ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(ms);
+    return "QueryStarted ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(getTimestamp());
 }
 
-NesQueryStoppedEvent::NesQueryStoppedEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp) : id(queryId), timestamp(timestamp) {};
+NesQueryStoppedEvent::NesQueryStoppedEvent(QueryId queryId) : id(queryId) {};
 std::string NesQueryStoppedEvent::toCSV() const
 {
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        timestamp.time_since_epoch()).count();
-    return "QueryStopped ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(ms);
+    return "QueryStopped ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(getTimestamp());
 }
 
-NesQueryRegisteredEvent::NesQueryRegisteredEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp) : id(queryId), timestamp(timestamp) {};
+NesQueryRegisteredEvent::NesQueryRegisteredEvent(QueryId queryId) : id(queryId) {};
 std::string NesQueryRegisteredEvent::toCSV() const
-{    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        timestamp.time_since_epoch()).count();
-    return "QueryRegistered ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(ms);
+{
+    return "QueryRegistered ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(getTimestamp());
 }
 
-NesQueryFailedEvent::NesQueryFailedEvent(QueryId queryId, std::exception exception) : id(queryId), exception(exception) {};
+NesQueryFailedEvent::NesQueryFailedEvent(QueryId queryId, std::string exceptionMessage)
+    : id(queryId), exceptionMessage(std::move(exceptionMessage)) {};
 std::string NesQueryFailedEvent::toCSV() const
 {
-    return "QueryFailed ," + id.getLocalQueryId().getRawValue() + "," + exception.what();
+    return "QueryFailed ," + id.getLocalQueryId().getRawValue() + "," + exceptionMessage;
 }
 
 NesWorkerCpuTimeEvent::NesWorkerCpuTimeEvent(QueryId queryId, uint64_t cpuTimeMicros) : id(queryId), cpuTimeMicros(cpuTimeMicros) {};
@@ -100,5 +97,14 @@ NesQueryResourceDeltaEvent::NesQueryResourceDeltaEvent(
     , memoryDeltaKb(memoryDeltaKb)
 {
 }
+
+std::string NesQueryResourceDeltaEvent::toCSV() const
+{
+    const auto startMs = std::chrono::duration_cast<std::chrono::milliseconds>(startTimestamp.time_since_epoch()).count();
+    const auto stopMs = std::chrono::duration_cast<std::chrono::milliseconds>(stopTimestamp.time_since_epoch()).count();
+    return "QueryResourceDelta ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(startMs) + "," + std::to_string(stopMs)
+        + "," + std::to_string(cpuDeltaMicros) + "," + std::to_string(memoryDeltaKb);
+}
+
 
 }

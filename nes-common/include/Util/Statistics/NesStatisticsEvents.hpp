@@ -1,6 +1,5 @@
 #pragma once
 #include <chrono>
-#include <exception>
 #include <functional>
 #include <string>
 #include <QueryId.hpp>
@@ -63,7 +62,7 @@ private:
 class NesQueryStartedEvent : public NesStatisticsEvents
 {
 public:
-    explicit NesQueryStartedEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp);
+    explicit NesQueryStartedEvent(QueryId queryId);
 
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryStarted"; }
@@ -72,14 +71,12 @@ public:
 
 private:
     QueryId id;
-    std::chrono::system_clock::time_point timestamp;
-
 };
 
 class NesQueryStoppedEvent : public NesStatisticsEvents
 {
     public:
-    explicit NesQueryStoppedEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp);
+    explicit NesQueryStoppedEvent(QueryId queryId);
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryStopped"; }
     uint64_t getQueryId() const override { return getFlattenedQueryId(id); }
@@ -87,13 +84,12 @@ class NesQueryStoppedEvent : public NesStatisticsEvents
 
     private:
     QueryId id;
-    std::chrono::system_clock::time_point timestamp;
 };
 
 class NesQueryRegisteredEvent : public NesStatisticsEvents
 {
     public:
-    explicit NesQueryRegisteredEvent(QueryId queryId, std::chrono::system_clock::time_point timestamp);
+    explicit NesQueryRegisteredEvent(QueryId queryId);
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryRegistered"; }
     uint64_t getQueryId() const override { return getFlattenedQueryId(id); }
@@ -101,13 +97,12 @@ class NesQueryRegisteredEvent : public NesStatisticsEvents
 
     private:
     QueryId id;
-    std::chrono::system_clock::time_point timestamp;
 };
 
 class NesQueryFailedEvent : public NesStatisticsEvents
 {
     public:
-    explicit NesQueryFailedEvent(QueryId queryId, std::exception exception);
+    explicit NesQueryFailedEvent(QueryId queryId, std::string exceptionMessage);
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryFailed"; }
     uint64_t getQueryId() const override { return getFlattenedQueryId(id); }
@@ -115,7 +110,7 @@ class NesQueryFailedEvent : public NesStatisticsEvents
 
     private:
     QueryId id;
-    std::exception exception;
+    std::string exceptionMessage;
 };
 
 class NesWorkerCpuTimeEvent : public NesStatisticsEvents

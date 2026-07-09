@@ -171,7 +171,7 @@ std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan pl
 
         listener->onEvent(SubmitQuerySystemEvent{plan.getQueryId(), explain(plan, ExplainVerbosity::Debug)});
 
-        NES::logStat<NesQueryRegisteredEvent>(plan.getQueryId(), std::chrono::system_clock::now());
+        NES::logStat<NesQueryRegisteredEvent>(plan.getQueryId());
 
         const DumpMode dumpMode(
             configuration.workerConfiguration.dumpQueryCompilationIR.getValue(), configuration.workerConfiguration.dumpGraph.getValue());
@@ -198,7 +198,7 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
 
         nodeEngine->startQuery(queryId);
 
-        NES::logStat<NES::NesQueryStartedEvent>(queryId,timestamp);
+        NES::logStat<NES::NesQueryStartedEvent>(queryId);
         if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
         {
             NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);

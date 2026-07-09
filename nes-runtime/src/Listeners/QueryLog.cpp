@@ -68,7 +68,7 @@ bool QueryLog::logQueryFailure(const QueryId queryId, const Exception exception,
             statusChange,
             [](const QueryStatusChange& lhs, const QueryStatusChange& rhs) { return lhs.timestamp < rhs.timestamp; });
         changes.emplace(pos, std::move(statusChange));
-        logStat<NesQueryFailedEvent>(queryId, exception);
+        logStat<NesQueryFailedEvent>(queryId, exception.what());
         return true;
     }
     return false;
@@ -78,7 +78,7 @@ bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, c
 {
     if (status == QueryStatus::Stopped)
     {
-        logStat<NesQueryStoppedEvent>(queryId, timestamp);
+        logStat<NesQueryStoppedEvent>(queryId);
         auto& stats = NesStatistics::getInstance();
         if (const auto stopSnapshot = collectProcessResourceSnapshot(timestamp))
         {
