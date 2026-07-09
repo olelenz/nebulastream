@@ -80,8 +80,7 @@ struct WorkerBufferUsageSnapshot
 {
     uint64_t totalCount;
     uint64_t availableCount;
-    uint64_t usedCount;
-    uint64_t usedBytes;
+    uint64_t bufferSize;
 };
 
 class NesStatistics{

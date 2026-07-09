@@ -39,14 +39,14 @@ std::string NesQueryFailedEvent::toCSV() const
 NesWorkerCpuTimeEvent::NesWorkerCpuTimeEvent(QueryId queryId, uint64_t cpuTimeMicros) : id(queryId), cpuTimeMicros(cpuTimeMicros) {};
 std::string NesWorkerCpuTimeEvent::toCSV() const
 {
-    return "WorkerCpuTimeMicros ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(cpuTimeMicros);
+    return "WorkerCpuTime ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(cpuTimeMicros);
 }
 
 NesWorkerMemoryUsageEvent::NesWorkerMemoryUsageEvent(QueryId queryId, uint64_t residentMemoryKb)
     : id(queryId), residentMemoryKb(residentMemoryKb) {};
 std::string NesWorkerMemoryUsageEvent::toCSV() const
 {
-    return "WorkerMemoryRssKb ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(residentMemoryKb);
+    return "WorkerMemoryUsage ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(residentMemoryKb);
 }
 
 NesWorkerActiveQueryCountEvent::NesWorkerActiveQueryCountEvent(QueryId queryId, uint64_t activeQueryCount)

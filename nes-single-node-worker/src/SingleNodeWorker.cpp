@@ -115,13 +115,11 @@ SingleNodeWorker::SingleNodeWorker(const SingleNodeWorkerConfiguration& configur
 
             const auto total = static_cast<uint64_t>(lockedBufferManager->getNumOfPooledBuffers());
             const auto available = static_cast<uint64_t>(lockedBufferManager->getNumberOfAvailableBuffers());
-            const auto used = total >= available ? total - available : 0;
             const auto bufferSize = static_cast<uint64_t>(lockedBufferManager->getBufferSize());
             return WorkerBufferUsageSnapshot{
                 .totalCount = total,
                 .availableCount = available,
-                .usedCount = used,
-                .usedBytes = used * bufferSize,
+                .bufferSize = bufferSize,
             };
         });
 

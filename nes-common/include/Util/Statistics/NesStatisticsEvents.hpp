@@ -118,7 +118,7 @@ class NesWorkerCpuTimeEvent : public NesStatisticsEvents
 public:
     explicit NesWorkerCpuTimeEvent(QueryId queryId, uint64_t cpuTimeMicros);
     std::string toCSV() const override;
-    std::string getEventType() const override { return "WorkerCpuTimeMicros"; }
+    std::string getEventType() const override { return "WorkerCpuTime"; }
     uint64_t getQueryId() const override { return 0; }
     uint64_t getMetricValue() const override { return cpuTimeMicros; }
 
@@ -132,7 +132,7 @@ class NesWorkerMemoryUsageEvent : public NesStatisticsEvents
 public:
     explicit NesWorkerMemoryUsageEvent(QueryId queryId, uint64_t residentMemoryKb);
     std::string toCSV() const override;
-    std::string getEventType() const override { return "WorkerMemoryRssKb"; }
+    std::string getEventType() const override { return "WorkerMemoryUsage"; }
     uint64_t getQueryId() const override { return 0; }
     uint64_t getMetricValue() const override { return residentMemoryKb; }
 

@@ -25,8 +25,8 @@ CREATE SINK stats_internal_sink(
 
 SELECT *
 FROM stats_internal_logical
-WHERE eventType == VARSIZED("WorkerCpuTimeMicros")
-   OR eventType == VARSIZED("WorkerMemoryRssKb")
+WHERE eventType == VARSIZED("WorkerCpuTime")
+   OR eventType == VARSIZED("WorkerMemoryUsage")
    OR eventType == VARSIZED("WorkerActiveQueryCount")
    OR eventType == VARSIZED("WorkerBufferTotalCount")
    OR eventType == VARSIZED("WorkerBufferAvailableCount")

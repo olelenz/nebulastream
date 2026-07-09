@@ -157,10 +157,11 @@ void NesStatistics::sampleResourceUsagePeriodically()
         if (workerBufferUsageProviderCopy)
         {
             const auto bufferUsage = workerBufferUsageProviderCopy();
+            const auto usedCount = bufferUsage.totalCount >= bufferUsage.availableCount ? bufferUsage.totalCount - bufferUsage.availableCount : 0;
             nesStats(std::make_unique<NesWorkerBufferTotalCountEvent>(INVALID_QUERY_ID, bufferUsage.totalCount));
             nesStats(std::make_unique<NesWorkerBufferAvailableCountEvent>(INVALID_QUERY_ID, bufferUsage.availableCount));
-            nesStats(std::make_unique<NesWorkerBufferUsedCountEvent>(INVALID_QUERY_ID, bufferUsage.usedCount));
-            nesStats(std::make_unique<NesWorkerBufferUsedBytesEvent>(INVALID_QUERY_ID, bufferUsage.usedBytes));
+            nesStats(std::make_unique<NesWorkerBufferUsedCountEvent>(INVALID_QUERY_ID, usedCount));
+            nesStats(std::make_unique<NesWorkerBufferUsedBytesEvent>(INVALID_QUERY_ID, usedCount * bufferUsage.bufferSize));
         }
         lock.lock();
     }
