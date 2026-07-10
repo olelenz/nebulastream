@@ -71,7 +71,7 @@ struct RawEventData
 {
     uint64_t seq;
     uint64_t ts;
-    uint64_t queryId;
+    std::string queryId;
     uint64_t metricValue;
     std::string eventType;
 };

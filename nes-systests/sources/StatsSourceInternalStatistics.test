@@ -5,7 +5,7 @@
 CREATE LOGICAL SOURCE stats_internal_logical(
     seq UINT64 NOT NULL,
     ts UINT64 NOT NULL,
-    queryId UINT64 NOT NULL,
+    queryId VARSIZED NOT NULL,
     metricValue UINT64 NOT NULL,
     eventType VARSIZED NOT NULL
 );
@@ -18,7 +18,7 @@ CREATE PHYSICAL SOURCE FOR stats_internal_logical TYPE Stats SET(
 CREATE SINK stats_internal_sink(
     stats_internal_logical.seq UINT64 NOT NULL,
     stats_internal_logical.ts UINT64 NOT NULL,
-    stats_internal_logical.queryId UINT64 NOT NULL,
+    stats_internal_logical.queryId VARSIZED NOT NULL,
     stats_internal_logical.metricValue UINT64 NOT NULL,
     stats_internal_logical.eventType VARSIZED NOT NULL
 ) TYPE File;

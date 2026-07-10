@@ -97,6 +97,8 @@ bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, c
         }
         else
         {
+            // Stop-time resource collection failed, so we cannot compute a delta.
+            // Still remove the query's start snapshot from NesStatistics to avoid leaving stale per-query state behind.
             static_cast<void>(stats.consumeQueryResourceStart(queryId));
         }
     }
