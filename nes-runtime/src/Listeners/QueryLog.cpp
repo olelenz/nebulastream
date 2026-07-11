@@ -79,6 +79,7 @@ bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, c
     if (status == QueryStatus::Stopped)
     {
         NES_LOG_STAT(NesQueryStoppedEvent, queryId);
+#if defined(NES_STATISTICS_ENABLED)
         auto& stats = NesStatistics::getInstance();
         if (const auto stopSnapshot = collectProcessResourceSnapshot(timestamp))
         {
@@ -101,6 +102,7 @@ bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, c
             // Still remove the query's start snapshot from NesStatistics to avoid leaving stale per-query state behind.
             static_cast<void>(stats.consumeQueryResourceStart(queryId));
         }
+#endif
     }
 
     QueryStatusChange statusChange(std::move(status), timestamp);
