@@ -8,10 +8,14 @@
 #include <string>
 #include <thread>
 #include <array>
-#include <sstream>
 #include <folly/MPMCQueue.h>
 #include <folly/Synchronized.h>
+#include <optional>
+#include <unordered_map>
+#include <chrono>
+#include <functional>
 #include "NesStatisticsEvents.hpp"
+#include "NesResourceUsage.hpp"
 
 // TODO: we should make this fast
 
@@ -67,9 +71,16 @@ struct RawEventData
 {
     uint64_t seq;
     uint64_t ts;
-    uint64_t queryId;
+    std::string queryId;
     uint64_t metricValue;
     std::string eventType;
+};
+
+struct WorkerBufferUsageSnapshot
+{
+    uint64_t totalCount;
+    uint64_t availableCount;
+    uint64_t bufferSize;
 };
 
 class NesStatistics{
@@ -82,6 +93,10 @@ class NesStatistics{
         void start(StatisticsWorkerType type, const std::string& filePath = "");
         void nesStats(std::unique_ptr<NesStatisticsEvents> event);
         void shutdown();
+        void recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot);
+        std::optional<QueryResourceSnapshot> consumeQueryResourceStart(QueryId queryId);
+        void setActiveQueryCountProvider(std::function<uint64_t()> provider);
+        void setWorkerBufferUsageProvider(std::function<WorkerBufferUsageSnapshot()> provider);
 
         std::string getStats() const;  // only relevant for the ring-buffer mode
         std::vector<RawEventData> getEventsSince(uint64_t sequenceNumber) const;
@@ -96,6 +111,9 @@ class NesStatistics{
 
         void workStatsQueue();
         void workStatsRingBuffer();
+        void startResourceSampler();
+        void stopResourceSampler();
+        void sampleResourceUsagePeriodically();
 
         std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
         std::condition_variable condVar;
@@ -111,6 +129,20 @@ class NesStatistics{
         std::atomic<bool> running{true};
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
+
+        static constexpr std::chrono::milliseconds DEFAULT_RESOURCE_SAMPLE_INTERVAL{1000};
+        std::thread resourceSamplerThread;
+        std::condition_variable resourceSamplerCondVar;
+        std::mutex resourceSamplerMutex;
+
+        std::mutex queryResourceSnapshotsMutex;
+        std::unordered_map<QueryId, QueryResourceSnapshot> queryResourceSnapshots;
+
+        std::mutex activeQueryCountProviderMutex;
+        std::function<uint64_t()> activeQueryCountProvider;
+
+        std::mutex workerBufferUsageProviderMutex;
+        std::function<WorkerBufferUsageSnapshot()> workerBufferUsageProvider;
 };
 // TODO: Counter event? needed natively? we can just query the statistics??
 
