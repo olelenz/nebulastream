@@ -118,13 +118,14 @@ class NesStatistics{
         void stopResourceSampler();
         void sampleResourceUsagePeriodically();
 
+#if defined(NES_STATISTICS_ENABLED)
         std::queue<std::unique_ptr<NesStatisticsEvents>> statsQueue;
         std::condition_variable condVar;
         std::mutex statsMutex;
 
         static constexpr std::size_t RING_BUFFER_CAPACITY = 1 << 14; // 16384
         static constexpr std::size_t NUM_EVENT_TYPES = static_cast<std::size_t>(EventTypeIndex::COUNT);
-        std::vector<folly::MPMCQueue<std::unique_ptr<NesStatisticsEvents>>> ringBuffers;
+        std::vector<std::unique_ptr<folly::MPMCQueue<std::unique_ptr<NesStatisticsEvents>>>> ringBuffers;
         std::counting_semaphore<> ringBufferSem{0};
 
         static constexpr std::size_t ROLLING_STORE_CAPACITY = 4096;
@@ -148,6 +149,7 @@ class NesStatistics{
 
         std::mutex workerBufferUsageProviderMutex;
         std::function<WorkerBufferUsageSnapshot()> workerBufferUsageProvider;
+#endif
 };
 #if defined(NES_STATISTICS_ENABLED)
 

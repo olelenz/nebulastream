@@ -9,14 +9,13 @@
 
 namespace NES {
 
-NesStatistics::NesStatistics() : running(false) {
 #if defined(NES_STATISTICS_ENABLED)
+NesStatistics::NesStatistics() : running(false) {
     ringBuffers.reserve(NUM_EVENT_TYPES);
     for (std::size_t i = 0; i < NUM_EVENT_TYPES; ++i) {
-        ringBuffers.emplace_back(RING_BUFFER_CAPACITY);
+        ringBuffers.push_back(std::make_unique<folly::MPMCQueue<std::unique_ptr<NesStatisticsEvents>>>(RING_BUFFER_CAPACITY));
     }
     start(StatisticsWorkerType::RingBuffer);
-#endif
 }
 NesStatistics::~NesStatistics() {
     shutdown();
@@ -72,7 +71,10 @@ void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
     }
     if(workerType == StatisticsWorkerType::RingBuffer){
         const std::size_t idx = static_cast<std::size_t>(event->getTypeIndex());
-        ringBuffers[idx].blockingWrite(std::move(event));
+        if (idx >= ringBuffers.size()) {
+            return;
+        }
+        ringBuffers[idx]->blockingWrite(std::move(event));
         ringBufferSem.release();
         return;
     }
@@ -93,8 +95,11 @@ void NesStatistics::nesStatsDirect(std::size_t queueIdx, std::unique_ptr<NesStat
         return;
     }
     assert(queueIdx < ringBuffers.size() && "queueIdx out of range");
+    if (queueIdx >= ringBuffers.size()) {
+        return;
+    }
     if(workerType == StatisticsWorkerType::RingBuffer){
-        ringBuffers[queueIdx].blockingWrite(std::move(event));
+        ringBuffers[queueIdx]->blockingWrite(std::move(event));
         ringBufferSem.release();
         return;
     }
@@ -232,7 +237,7 @@ void NesStatistics::workStatsRingBuffer() {
 
         for (auto& q : ringBuffers) {
             std::unique_ptr<NesStatisticsEvents> event;
-            while (q.read(event)) {
+            while (q->read(event)) {
                 if (event) {
                     rollingStore.wlock()->push(std::move(event));
                 }
@@ -246,7 +251,7 @@ void NesStatistics::workStatsRingBuffer() {
                 any = false;
                 for (auto& q : ringBuffers) {
                     std::unique_ptr<NesStatisticsEvents> event;
-                    while (q.read(event)) {
+                    while (q->read(event)) {
                         any = true;
                         if (event) {
                             rollingStore.wlock()->push(std::move(event));
@@ -281,5 +286,24 @@ std::vector<RawEventData> NesStatistics::getEventsSince(uint64_t sequenceNumber)
     });
     return events;
 }
+#else
+NesStatistics::NesStatistics() {}
+NesStatistics::~NesStatistics() {}
+void NesStatistics::start(StatisticsWorkerType, const std::string&) {}
+void NesStatistics::shutdown() {}
+void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents>) {}
+void NesStatistics::nesStatsDirect(std::size_t, std::unique_ptr<NesStatisticsEvents>) {}
+void NesStatistics::recordQueryResourceStart(QueryId, QueryResourceSnapshot) {}
+std::optional<QueryResourceSnapshot> NesStatistics::consumeQueryResourceStart(QueryId) { return std::nullopt; }
+void NesStatistics::setActiveQueryCountProvider(std::function<uint64_t()>) {}
+void NesStatistics::setWorkerBufferUsageProvider(std::function<WorkerBufferUsageSnapshot()>) {}
+void NesStatistics::startResourceSampler() {}
+void NesStatistics::stopResourceSampler() {}
+void NesStatistics::sampleResourceUsagePeriodically() {}
+void NesStatistics::workStatsQueue() {}
+void NesStatistics::workStatsRingBuffer() {}
+std::string NesStatistics::getStats() const { return ""; }
+std::vector<RawEventData> NesStatistics::getEventsSince(uint64_t) const { return {}; }
+#endif
 
 }
