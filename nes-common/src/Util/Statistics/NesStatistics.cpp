@@ -101,25 +101,6 @@ void NesStatistics::nesStatsDirect(std::size_t queueIdx, std::unique_ptr<NesStat
     }
 }
 
-void NesStatistics::nesStatsDirect(std::size_t queueIdx, std::unique_ptr<NesStatisticsEvents> event){
-    assert(queueIdx < ringBuffers.size() && "queueIdx out of range");
-    if(workerType == StatisticsWorkerType::RingBuffer){
-        ringBuffers[queueIdx].blockingWrite(std::move(event));
-        ringBufferSem.release();
-        return;
-    }
-
-    bool wakeUpThread = false;
-    {
-        std::lock_guard<std::mutex> lock(statsMutex);
-        wakeUpThread = statsQueue.empty();
-        statsQueue.push(std::move(event));
-    }
-    if (wakeUpThread) {
-        condVar.notify_one();
-    }
-}
-
 
 void NesStatistics::recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot)
 {
