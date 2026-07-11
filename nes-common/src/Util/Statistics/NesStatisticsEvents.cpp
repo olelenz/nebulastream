@@ -11,6 +11,12 @@ std::string NesBufferAllocateEvent::toCSV() const {
     return "BufferAllocation " + std::to_string(id) + " : " + std::to_string(size);  // TODO: make this actual csv
 }
 
+NesCompilationTimeEvent::NesCompilationTimeEvent(int queryId, size_t compilationTimeMs) : id(queryId), size(compilationTimeMs){};
+
+std::string NesCompilationTimeEvent::toCSV() const {
+    return "CompilationTime " + std::to_string(id) + " : " + std::to_string(size);  // TODO: make csv
+}
+
 // Query level events
 NesQueryStartedEvent::NesQueryStartedEvent(QueryId queryId) : id(queryId) {};
 std::string NesQueryStartedEvent::toCSV() const {
@@ -105,6 +111,5 @@ std::string NesQueryResourceDeltaEvent::toCSV() const
     return "QueryResourceDelta ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(startMs) + "," + std::to_string(stopMs)
         + "," + std::to_string(cpuDeltaMicros) + "," + std::to_string(memoryDeltaKb);
 }
-
 
 }

@@ -5,6 +5,18 @@
 
 namespace NES {
 
+enum class EventTypeIndex : uint8_t {
+    BufferAlloc    = 0,
+    CompilationTime = 1,
+    QueryStarted   = 2,
+    QueryStopped   = 3,
+    QueryRegistered = 4,
+    QueryFailed    = 5,
+    QueryResourceDelta = 6,
+    Other          = 7,
+    COUNT
+};
+
 class NesStatisticsEvents{
 public:
     NesStatisticsEvents()
@@ -18,6 +30,7 @@ public:
     virtual std::string getEventType() const = 0;
     virtual std::string getQueryId() const = 0;
     virtual uint64_t getMetricValue() const = 0;
+    virtual EventTypeIndex getTypeIndex() const { return EventTypeIndex::Other; }
     uint64_t getTimestamp() const { return timestamp; }
 private:
     uint64_t timestamp;
@@ -25,6 +38,8 @@ private:
 
 class NesBufferAllocateEvent : public NesStatisticsEvents{
 public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferAlloc;
+
     explicit NesBufferAllocateEvent(int queryId, size_t bufferSize);
 
     std::string toCSV() const override;
@@ -32,6 +47,7 @@ public:
     std::string getEventType() const override {return "BufferAllocation";};
     std::string getQueryId() const override {return std::to_string(id);}
     uint64_t getMetricValue() const override {return size;}
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     int id;
@@ -40,12 +56,15 @@ private:
 
 class NesCompilationTimeEvent : public NesStatisticsEvents{
 public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::CompilationTime;
+
     explicit NesCompilationTimeEvent(int queryId, size_t bufferSize);
 
     std::string toCSV() const override;
     std::string getEventType() const override {return "CompilationTime";};
     std::string getQueryId() const override {return std::to_string(id);}
     uint64_t getMetricValue() const override {return size;}
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     int id;
@@ -55,12 +74,15 @@ private:
 class NesQueryStartedEvent : public NesStatisticsEvents
 {
 public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::QueryStarted;
+
     explicit NesQueryStartedEvent(QueryId queryId);
 
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryStarted"; }
     std::string getQueryId() const override { return id.getLocalQueryId().getRawValue(); }
     uint64_t getMetricValue() const override { return 0; }
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -68,12 +90,15 @@ private:
 
 class NesQueryStoppedEvent : public NesStatisticsEvents
 {
-    public:
+public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::QueryStopped;
+
     explicit NesQueryStoppedEvent(QueryId queryId);
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryStopped"; }
     std::string getQueryId() const override { return id.getLocalQueryId().getRawValue(); }
     uint64_t getMetricValue() const override { return 0; }
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
     private:
     QueryId id;
@@ -81,12 +106,15 @@ class NesQueryStoppedEvent : public NesStatisticsEvents
 
 class NesQueryRegisteredEvent : public NesStatisticsEvents
 {
-    public:
+public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::QueryRegistered;
+
     explicit NesQueryRegisteredEvent(QueryId queryId);
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryRegistered"; }
     std::string getQueryId() const override { return id.getLocalQueryId().getRawValue(); }
     uint64_t getMetricValue() const override { return 0; }
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
     private:
     QueryId id;
@@ -94,12 +122,15 @@ class NesQueryRegisteredEvent : public NesStatisticsEvents
 
 class NesQueryFailedEvent : public NesStatisticsEvents
 {
-    public:
+public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::QueryFailed;
+
     explicit NesQueryFailedEvent(QueryId queryId, std::string exceptionMessage);
     std::string toCSV() const override;
     std::string getEventType() const override { return "QueryFailed"; }
     std::string getQueryId() const override { return id.getLocalQueryId().getRawValue(); }
     uint64_t getMetricValue() const override { return 0; }
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
     private:
     QueryId id;
@@ -207,6 +238,8 @@ private:
 class NesQueryResourceDeltaEvent : public NesStatisticsEvents
 {
 public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::QueryResourceDelta;
+
     explicit NesQueryResourceDeltaEvent(
         QueryId queryId,
         std::chrono::system_clock::time_point startTimestamp,
@@ -217,6 +250,7 @@ public:
     std::string getEventType() const override { return "QueryResourceDelta"; }
     std::string getQueryId() const override { return id.getLocalQueryId().getRawValue(); }
     uint64_t getMetricValue() const override { return cpuDeltaMicros; }
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;

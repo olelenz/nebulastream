@@ -8,6 +8,8 @@
 #include <string>
 #include <thread>
 #include <array>
+#include <sstream>
+#include <vector>
 #include <folly/MPMCQueue.h>
 #include <folly/Synchronized.h>
 #include <optional>
@@ -92,6 +94,7 @@ class NesStatistics{
 
         void start(StatisticsWorkerType type, const std::string& filePath = "");
         void nesStats(std::unique_ptr<NesStatisticsEvents> event);
+        void nesStatsDirect(size_t queueIdx, std::unique_ptr<NesStatisticsEvents> event);
         void shutdown();
         void recordQueryResourceStart(QueryId queryId, QueryResourceSnapshot snapshot);
         std::optional<QueryResourceSnapshot> consumeQueryResourceStart(QueryId queryId);
@@ -120,13 +123,15 @@ class NesStatistics{
         std::mutex statsMutex;
 
         static constexpr std::size_t RING_BUFFER_CAPACITY = 1 << 14; // 16384
-        folly::MPMCQueue<std::unique_ptr<NesStatisticsEvents>> ringBuffer{RING_BUFFER_CAPACITY};
+        static constexpr std::size_t NUM_EVENT_TYPES = static_cast<std::size_t>(EventTypeIndex::COUNT);
+        std::vector<folly::MPMCQueue<std::unique_ptr<NesStatisticsEvents>>> ringBuffers;
+        std::counting_semaphore<> ringBufferSem{0};
 
         static constexpr std::size_t ROLLING_STORE_CAPACITY = 4096;
         folly::Synchronized<CircularBuffer<std::unique_ptr<NesStatisticsEvents>, ROLLING_STORE_CAPACITY>> rollingStore;
 
         StatisticsWorkerType workerType{StatisticsWorkerType::RingBuffer};
-        std::atomic<bool> running{true};
+        std::atomic<bool> running{false};  // set to true by start()
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
 
@@ -144,12 +149,18 @@ class NesStatistics{
         std::mutex workerBufferUsageProviderMutex;
         std::function<WorkerBufferUsageSnapshot()> workerBufferUsageProvider;
 };
-// TODO: Counter event? needed natively? we can just query the statistics??
 
 template<typename EventType, typename... Args>
-    void logStat(Args&&... args) {
-    NesStatistics::getInstance().nesStats(
-        std::make_unique<EventType>(std::forward<Args>(args)...)
+void logStat(Args&&... args) {
+    // resolve the queue
+    constexpr size_t idx = static_cast<size_t>(EventType::typeIndex);
+    static_assert(
+        EventType::typeIndex != EventTypeIndex::Other,
+        "logStat<T>: EventType::typeIndex must not be EventTypeIndex::Other. "
+        "Add a dedicated enumerator to EventTypeIndex for this event type."
+    );
+    NesStatistics::getInstance().nesStatsDirect(
+        idx, std::make_unique<EventType>(std::forward<Args>(args)...)
     );
 }
 
