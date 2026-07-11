@@ -35,6 +35,7 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
         outFile.open(filePath, std::ios::app);
         if(!outFile.is_open()){
             std::cout << "Could not open file \n";
+            running = false;
             return;
         }
         workThread = std::thread(&NesStatistics::workStatsQueue, this);
@@ -66,6 +67,9 @@ void NesStatistics::shutdown(){
 }
 
 void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
+    if (!running.load()) {
+        return;
+    }
     if(workerType == StatisticsWorkerType::RingBuffer){
         const std::size_t idx = static_cast<std::size_t>(event->getTypeIndex());
         ringBuffers[idx].blockingWrite(std::move(event));
@@ -85,6 +89,9 @@ void NesStatistics::nesStats(std::unique_ptr<NesStatisticsEvents> event){
 }
 
 void NesStatistics::nesStatsDirect(std::size_t queueIdx, std::unique_ptr<NesStatisticsEvents> event){
+    if (!running.load()) {
+        return;
+    }
     assert(queueIdx < ringBuffers.size() && "queueIdx out of range");
     if(workerType == StatisticsWorkerType::RingBuffer){
         ringBuffers[queueIdx].blockingWrite(std::move(event));
