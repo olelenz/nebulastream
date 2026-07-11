@@ -149,14 +149,15 @@ class NesStatistics{
         std::mutex workerBufferUsageProviderMutex;
         std::function<WorkerBufferUsageSnapshot()> workerBufferUsageProvider;
 };
+#if defined(NES_STATISTICS_ENABLED)
 
 template<typename EventType, typename... Args>
-void logStat(Args&&... args) {
+void logStatInternal(Args&&... args) {
     // resolve the queue
     constexpr size_t idx = static_cast<size_t>(EventType::typeIndex);
     static_assert(
         EventType::typeIndex != EventTypeIndex::Other,
-        "logStat<T>: EventType::typeIndex must not be EventTypeIndex::Other. "
+        "logStatInternal<T>: EventType::typeIndex must not be EventTypeIndex::Other. "
         "Add a dedicated enumerator to EventTypeIndex for this event type."
     );
     NesStatistics::getInstance().nesStatsDirect(
@@ -164,4 +165,15 @@ void logStat(Args&&... args) {
     );
 }
 
-}
+// NES_LOG_STAT(NesBufferAllocateEvent, 0, size) expands to:
+//   ::NES::logStatInternal<::NES::NesBufferAllocateEvent>(0, size)
+#define NES_LOG_STAT(EventType, ...) ::NES::logStatInternal<::NES::EventType>(__VA_ARGS__)
+
+#else // NES_STATISTICS_ENABLED not defined
+
+// stats are not compiled
+#define NES_LOG_STAT(EventType, ...) do {} while (0)
+
+#endif // NES_STATISTICS_ENABLED
+
+} // namespace NES
