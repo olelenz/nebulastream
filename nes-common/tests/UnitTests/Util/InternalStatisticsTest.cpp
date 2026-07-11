@@ -292,8 +292,8 @@ TEST_F(InternalStatisticsTest, TestLogStatMultipleTypes)
 
     bool foundBuffer = false, foundCompile = false;
     for (const auto& e : events) {
-        if (e.eventType == "BufferAllocation") { foundBuffer = true; EXPECT_EQ(e.queryId, 13); EXPECT_EQ(e.metricValue, 1024); }
-        if (e.eventType == "CompilationTime")  { foundCompile = true; EXPECT_EQ(e.queryId, 14);  EXPECT_EQ(e.metricValue, 500);  }
+        if (e.eventType == "BufferAllocation") { foundBuffer = true; EXPECT_EQ(e.queryId, "13"); EXPECT_EQ(e.metricValue, 1024); }
+        if (e.eventType == "CompilationTime")  { foundCompile = true; EXPECT_EQ(e.queryId, "14");  EXPECT_EQ(e.metricValue, 500);  }
     }
     EXPECT_TRUE(foundBuffer);
     EXPECT_TRUE(foundCompile);
