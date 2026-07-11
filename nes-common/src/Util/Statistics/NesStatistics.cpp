@@ -10,11 +10,13 @@
 namespace NES {
 
 NesStatistics::NesStatistics() : running(false) {
+#if defined(NES_STATISTICS_ENABLED)
     ringBuffers.reserve(NUM_EVENT_TYPES);
     for (std::size_t i = 0; i < NUM_EVENT_TYPES; ++i) {
         ringBuffers.emplace_back(RING_BUFFER_CAPACITY);
     }
     start(StatisticsWorkerType::RingBuffer);
+#endif
 }
 NesStatistics::~NesStatistics() {
     shutdown();

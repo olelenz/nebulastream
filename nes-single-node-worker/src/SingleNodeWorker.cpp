@@ -192,12 +192,14 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
         auto timestamp = std::chrono::system_clock::now();
 
         NES_LOG_STAT(NesQueryStartedEvent, queryId);
+#if defined(NES_STATISTICS_ENABLED)
         // Attempt to collect the current process-level resource counters.
         // resourceSnapshot is std::optional<QueryResourceSnapshot>.
         if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
         {
             NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);
         }
+#endif
 
         nodeEngine->startQuery(queryId);
 
