@@ -1,0 +1,38 @@
+# name: sources/StatsSourceInternalStatistics.test
+# description: This test verifies that the StatsSource exposes worker-level periodic metrics and query lifecycle events.
+# groups: [Sources, Stats]
+
+CREATE LOGICAL SOURCE stats_internal_logical(
+    seq UINT64 NOT NULL,
+    ts UINT64 NOT NULL,
+    queryId VARSIZED NOT NULL,
+    metricValue UINT64 NOT NULL,
+    eventType VARSIZED NOT NULL
+);
+
+CREATE PHYSICAL SOURCE FOR stats_internal_logical TYPE Stats SET(
+    10 AS `SOURCE`.POLL_INTERVAL_MS,
+    4000 AS `SOURCE`.MAX_RUNTIME_MS
+);
+
+CREATE SINK stats_internal_sink(
+    stats_internal_logical.seq UINT64 NOT NULL,
+    stats_internal_logical.ts UINT64 NOT NULL,
+    stats_internal_logical.queryId VARSIZED NOT NULL,
+    stats_internal_logical.metricValue UINT64 NOT NULL,
+    stats_internal_logical.eventType VARSIZED NOT NULL
+) TYPE File;
+
+SELECT *
+FROM stats_internal_logical
+WHERE eventType == VARSIZED("WorkerCpuTime")
+   OR eventType == VARSIZED("WorkerMemoryUsage")
+   OR eventType == VARSIZED("WorkerActiveQueryCount")
+   OR eventType == VARSIZED("WorkerBufferTotalCount")
+   OR eventType == VARSIZED("WorkerBufferAvailableCount")
+   OR eventType == VARSIZED("WorkerBufferUsedCount")
+   OR eventType == VARSIZED("WorkerBufferUsedBytes")
+   OR eventType == VARSIZED("QueryRegistered")
+   OR eventType == VARSIZED("QueryStarted")
+INTO stats_internal_sink;
+----

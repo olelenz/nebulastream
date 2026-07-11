@@ -17,7 +17,7 @@ public:
         return "val_" + std::to_string(val);
     }
     std::string getEventType() const override { return "MockEvent"; }
-    uint64_t getQueryId() const override { return 0; }
+    std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return val; }
 private:
     int val;
