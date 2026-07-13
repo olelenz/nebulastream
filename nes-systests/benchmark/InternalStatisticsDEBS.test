@@ -1,0 +1,59 @@
+# name: benchmark/InternalStatisticsDEBS.test
+# description: Manual StatsSource run next to DEBS Query 8.
+# groups: [benchmark, large, Stats, manual]
+
+# This is not meant to assert exact CPU/RSS/buffer numbers. Run it as a normal
+# systest with two queries so the StatsSource query overlaps the DEBS query:
+#
+#   systest -n 2 --testLocation nes-systests/benchmark/InternalStatisticsDEBS.test --workingDir /tmp/nes-internal-stats-debs --data <path-to-systest-testdata>
+#
+# Avoid -b here: benchmark mode runs queries one after another, so there is no
+# DEBS workload for StatsSource to observe. File sinks land under:
+#   results/InternalStatisticsDEBS_1.csv  raw stats
+#   results/InternalStatisticsDEBS_2.csv  DEBS checksum
+#
+# The first query intentionally has no stable expected output. It is a manual
+# probe; produced rows may trip the exact-result checker.
+
+# Same input as benchmark/DEBS.test.
+CREATE LOGICAL SOURCE solarPanels(producerId INT32 NOT NULL, groupId INT32 NOT NULL, producedPower FLOAT64 NOT NULL, timestamp UINT64 NOT NULL);
+CREATE PHYSICAL SOURCE FOR solarPanels TYPE File;
+ATTACH FILE large/debs/SOLAR_PANELS_TOPIC_1G.csv
+
+# DEBS Query 8 checksum sink.
+CREATE SINK winPowerProductionChecksum(solarPanels.start UINT64 NOT NULL, solarPanels.end UINT64 NOT NULL, solarPanels.groupId INT32 NOT NULL, solarPanels.producedPower FLOAT64 NOT NULL)  TYPE Checksum;
+
+# Raw StatsSource rows.
+CREATE LOGICAL SOURCE stats_logical(
+    seq UINT64 NOT NULL,
+    ts UINT64 NOT NULL,
+    queryId VARSIZED NOT NULL,
+    metricValue UINT64 NOT NULL,
+    eventType VARSIZED NOT NULL
+);
+
+CREATE PHYSICAL SOURCE FOR stats_logical TYPE Stats SET(
+    10 AS `SOURCE`.POLL_INTERVAL_MS,
+    30000 AS `SOURCE`.MAX_RUNTIME_MS
+);
+
+CREATE SINK internalStatsRaw(
+    stats_logical.seq UINT64 NOT NULL,
+    stats_logical.ts UINT64 NOT NULL,
+    stats_logical.queryId VARSIZED NOT NULL,
+    stats_logical.metricValue UINT64 NOT NULL,
+    stats_logical.eventType VARSIZED NOT NULL
+) TYPE File;
+
+# Start stats first; keep the stream unfiltered while experimenting with event names.
+SELECT * FROM stats_logical INTO internalStatsRaw;
+----
+
+# DEBS Query 8 - Window aggregations with sliding windows.
+SELECT start, end, groupId, SUM(producedPower) AS producedPower
+FROM solarPanels
+GROUP BY groupId
+WINDOW SLIDING(timestamp, SIZE 1 HOUR, ADVANCE BY 10 MINUTES)
+INTO winPowerProductionChecksum;
+----
+11484119, 23389063574
