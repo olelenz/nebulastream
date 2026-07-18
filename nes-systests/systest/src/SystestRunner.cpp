@@ -44,10 +44,12 @@
 #include <QueryManager/GRPCQuerySubmissionBackend.hpp>
 #include <QueryManager/QueryManager.hpp>
 #include <Util/Logger/Logger.hpp>
+#include <Util/Statistics/NesStatistics.hpp>
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp> ///NOLINT(misc-include-cleaner)
+#include <scope_guard.hpp>
 #include <DistributedQuery.hpp>
 #include <ErrorHandling.hpp>
 #include <QuerySubmitter.hpp>
@@ -437,12 +439,30 @@ std::vector<RunningQuery> runQueriesAndBenchmark(
     const SingleNodeWorkerConfiguration& configuration,
     nlohmann::json& resultJson,
     const SystestClusterConfiguration& clusterConfig,
-    SystestProgressTracker& progressTracker)
+    SystestProgressTracker& progressTracker,
+    const std::filesystem::path& statisticsOutputPath)
 {
     auto catalog = std::make_shared<WorkerCatalog>(clusterConfig.workers);
 
     auto worker = std::make_unique<QueryManager>(std::move(catalog), createEmbeddedBackend(configuration));
     QuerySubmitter submitter(std::move(worker));
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+    auto& statistics = NesStatistics::getInstance();
+    if (!statisticsOutputPath.empty())
+    {
+        statistics.startCsvCollection(statisticsOutputPath.string());
+        std::cout << "Runtime statistics output: " << statisticsOutputPath.string() << '\n' << std::flush;
+    }
+    SCOPE_EXIT
+    {
+        if (!statisticsOutputPath.empty())
+        {
+            statistics.stopCsvCollection();
+        }
+    };
+#else
+    static_cast<void>(statisticsOutputPath);
+#endif
     std::vector<std::shared_ptr<RunningQuery>> ranQueries;
     progressTracker.reset();
     progressTracker.setTotalQueries(queries.size());
@@ -576,11 +596,29 @@ std::vector<RunningQuery> runQueriesAtLocalWorker(
     const SystestClusterConfiguration& clusterConfig,
     const SingleNodeWorkerConfiguration& configuration,
     SystestProgressTracker& progressTracker,
-    const QueryPerformanceMessageBuilder& queryPerformanceMessage)
+    const QueryPerformanceMessageBuilder& queryPerformanceMessage,
+    const std::filesystem::path& statisticsOutputPath)
 {
     auto catalog = std::make_shared<WorkerCatalog>(clusterConfig.workers);
 
     QuerySubmitter submitter(std::make_unique<QueryManager>(std::move(catalog), createEmbeddedBackend(configuration)));
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+    auto& statistics = NesStatistics::getInstance();
+    if (!statisticsOutputPath.empty())
+    {
+        statistics.startCsvCollection(statisticsOutputPath.string());
+        std::cout << "Runtime statistics output: " << statisticsOutputPath.string() << '\n' << std::flush;
+    }
+    SCOPE_EXIT
+    {
+        if (!statisticsOutputPath.empty())
+        {
+            statistics.stopCsvCollection();
+        }
+    };
+#else
+    static_cast<void>(statisticsOutputPath);
+#endif
     return runQueries(queries, numConcurrentQueries, submitter, progressTracker, queryPerformanceMessage);
 }
 

@@ -375,8 +375,12 @@ SystestExecutorResult SystestExecutor::executeSystests()
 
                 progressTracker.reset();
                 progressTracker.setTotalQueries(benchmarkQueries.size());
+                const auto statisticsOutputPath = config.collectStatistics.getValue()
+                    ? std::filesystem::path(config.workingDir.getValue()) / "results"
+                        / fmt::format("internal-statistics-{:%Y-%m-%d_%H-%M-%S}-{}-benchmark.csv", std::chrono::system_clock::now(), ::getpid())
+                    : std::filesystem::path{};
                 auto failed = runQueriesAndBenchmark(
-                    benchmarkQueries, singleNodeWorkerConfiguration, benchmarkResults, config.clusterConfig, progressTracker);
+                    benchmarkQueries, singleNodeWorkerConfiguration, benchmarkResults, config.clusterConfig, progressTracker, statisticsOutputPath);
                 failedQueries.insert(failedQueries.end(), failed.begin(), failed.end());
                 std::cout << benchmarkResults.dump(4);
                 const auto outputPath = std::filesystem::path(config.workingDir.getValue()) / "BenchmarkResults.json";
@@ -394,8 +398,10 @@ SystestExecutorResult SystestExecutor::executeSystests()
 
                 progressTracker.reset();
                 progressTracker.setTotalQueries(queries.size());
+                uint64_t configurationGroupId = 0;
                 for (const auto& [overrideConfig, queriesForConfig] : queriesByOverride)
                 {
+                    ++configurationGroupId;
                     auto configCopy = singleNodeWorkerConfiguration;
                     for (const auto& [key, value] : overrideConfig.overrideParameters)
                     {
@@ -405,8 +411,12 @@ SystestExecutorResult SystestExecutor::executeSystests()
                         ? Systest::QueryPerformanceMessageBuilder{[](Systest::RunningQuery& runningQuery)
                                                                   { return fmt::format(" in {}", runningQuery.getElapsedTime()); }}
                         : Systest::QueryPerformanceMessageBuilder{Systest::discardPerformanceMessage};
+                    const auto statisticsOutputPath = config.collectStatistics.getValue()
+                        ? std::filesystem::path(config.workingDir.getValue()) / "results"
+                            / fmt::format("internal-statistics-{:%Y-%m-%d_%H-%M-%S}-{}-group-{}.csv", std::chrono::system_clock::now(), ::getpid(), configurationGroupId)
+                        : std::filesystem::path{};
                     auto failed = runQueriesAtLocalWorker(
-                        queriesForConfig, numberConcurrentQueries, config.clusterConfig, configCopy, progressTracker, performanceMessage);
+                        queriesForConfig, numberConcurrentQueries, config.clusterConfig, configCopy, progressTracker, performanceMessage, statisticsOutputPath);
                     failedQueries.insert(failedQueries.end(), failed.begin(), failed.end());
                 }
             }

@@ -72,7 +72,8 @@ inline std::string discardPerformanceMessage(RunningQuery&)
     const SystestClusterConfiguration& clusterConfig,
     const SingleNodeWorkerConfiguration& configuration,
     SystestProgressTracker& progressTracker,
-    const QueryPerformanceMessageBuilder& queryPerformanceMessage);
+    const QueryPerformanceMessageBuilder& queryPerformanceMessage,
+    const std::filesystem::path& statisticsOutputPath);
 
 /// Run queries remote on the single-node-worker specified by the URI
 /// @return returns a collection of failed queries
@@ -90,7 +91,8 @@ inline std::string discardPerformanceMessage(RunningQuery&)
     const SingleNodeWorkerConfiguration& configuration,
     nlohmann::json& resultJson,
     const SystestClusterConfiguration& clusterConfig,
-    SystestProgressTracker& progressTracker);
+    SystestProgressTracker& progressTracker,
+    const std::filesystem::path& statisticsOutputPath);
 
 /// Prints the error message, if the query has failed/passed and the expected and result tuples, like below
 /// function/arithmetical/FunctionDiv:4..................................Passed

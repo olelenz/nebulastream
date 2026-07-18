@@ -103,6 +103,10 @@ class NesStatistics{
 
         std::string getStats() const;  // only relevant for the ring-buffer mode
         std::vector<RawEventData> getEventsSince(uint64_t sequenceNumber) const;
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+        void startCsvCollection(const std::string& filePath);
+        void stopCsvCollection();
+#endif
 
         // make this a singleton
         NesStatistics(NesStatistics const&) = delete;
@@ -123,7 +127,7 @@ class NesStatistics{
         std::condition_variable condVar;
         std::mutex statsMutex;
 
-        static constexpr std::size_t RING_BUFFER_CAPACITY = 1 << 14; // 16384
+        static constexpr std::size_t RING_BUFFER_CAPACITY = 1 << 18; // 16384
         static constexpr std::size_t NUM_EVENT_TYPES = static_cast<std::size_t>(EventTypeIndex::COUNT);
         std::vector<std::unique_ptr<folly::MPMCQueue<std::unique_ptr<NesStatisticsEvents>>>> ringBuffers;
         std::counting_semaphore<> ringBufferSem{0};
@@ -135,6 +139,10 @@ class NesStatistics{
         std::atomic<bool> running{false};  // set to true by start()
         std::thread workThread;
         std::ofstream outFile; // only used by Buffered / Chunked
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+        std::ofstream csvFile;
+        std::mutex csvMutex;
+#endif
 
         static constexpr std::chrono::milliseconds DEFAULT_RESOURCE_SAMPLE_INTERVAL{1000};
         std::thread resourceSamplerThread;

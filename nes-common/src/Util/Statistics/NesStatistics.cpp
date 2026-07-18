@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <stdexcept>
 
 // TODO: how do we delete stuff from the file?
 
@@ -231,16 +232,88 @@ void NesStatistics::workStatsQueue(){
 
 }
 
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+void NesStatistics::startCsvCollection(const std::string& filePath)
+{
+    if (filePath.empty())
+    {
+        throw std::invalid_argument("Statistics CSV output path must not be empty");
+    }
+    std::lock_guard lock(csvMutex);
+    if (csvFile.is_open())
+    {
+        throw std::logic_error("Statistics CSV collection is already active");
+    }
+    csvFile.clear();
+    csvFile.open(filePath, std::ios::out | std::ios::trunc);
+    if (!csvFile.is_open())
+    {
+        throw std::runtime_error("Could not open statistics CSV file: " + filePath);
+    }
+    csvFile << "seq,ts,queryId,metricValue,eventType\n";
+}
+
+void NesStatistics::stopCsvCollection()
+{
+    std::lock_guard lock(csvMutex);
+    if (!csvFile.is_open())
+    {
+        return;
+    }
+    csvFile.flush();
+    csvFile.close();
+}
+#endif
+
 void NesStatistics::workStatsRingBuffer() {
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+    const auto consumeEvent = [this](std::unique_ptr<NesStatisticsEvents> event) {
+        if (!event) {
+            return;
+        }
+
+        bool collectCsv;
+        {
+            std::lock_guard lock(csvMutex);
+            collectCsv = csvFile.is_open();
+        }
+        if (!collectCsv)
+        {
+            rollingStore.wlock()->push(std::move(event));
+            return;
+        }
+
+        const auto timestamp = event->getTimestamp();
+        const auto queryId = event->getQueryId();
+        const auto metricValue = event->getMetricValue();
+        const auto eventType = event->getEventType();
+        uint64_t sequenceNumber;
+        {
+            auto store = rollingStore.wlock();
+            sequenceNumber = store->nextSeq;
+            store->push(std::move(event));
+        }
+
+        std::lock_guard lock(csvMutex);
+        if (csvFile.is_open()) {
+            csvFile << sequenceNumber << ',' << timestamp << ',' << queryId << ',' << metricValue << ',' << eventType << '\n';
+        }
+    };
+#endif
+
     while (true) {
         ringBufferSem.acquire();
 
         for (auto& q : ringBuffers) {
             std::unique_ptr<NesStatisticsEvents> event;
             while (q->read(event)) {
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+                consumeEvent(std::move(event));
+#else
                 if (event) {
                     rollingStore.wlock()->push(std::move(event));
                 }
+#endif
             }
         }
 
@@ -253,15 +326,22 @@ void NesStatistics::workStatsRingBuffer() {
                     std::unique_ptr<NesStatisticsEvents> event;
                     while (q->read(event)) {
                         any = true;
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+                        consumeEvent(std::move(event));
+#else
                         if (event) {
                             rollingStore.wlock()->push(std::move(event));
                         }
+#endif
                     }
                 }
             }
             break;
         }
     }
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+    stopCsvCollection();
+#endif
 }
 
 std::string NesStatistics::getStats() const {
