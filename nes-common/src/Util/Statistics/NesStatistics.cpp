@@ -224,7 +224,7 @@ void NesStatistics::workStatsQueue(){
             statsQueue.pop();
         }
         if(currentEvent){
-            outFile << currentEvent->toCSV() << "\n";
+            outFile << currentEvent->toString() << "\n";
         }
     }
     outFile.close();
@@ -268,7 +268,7 @@ std::string NesStatistics::getStats() const {
     std::ostringstream oss;
     rollingStore.rlock()->forEach([&oss](const uint64_t, const std::unique_ptr<NesStatisticsEvents>& event) {
         if (event) {
-            oss << event->toCSV() << '\n';
+            oss << event->toString() << '\n';
         }
     });
     return oss.str();

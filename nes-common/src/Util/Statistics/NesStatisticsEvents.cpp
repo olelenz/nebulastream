@@ -7,91 +7,91 @@ namespace NES {
 
 NesBufferAllocateEvent::NesBufferAllocateEvent(QueryId queryId, size_t bufferSize) : id(queryId), size(bufferSize){};
 
-std::string NesBufferAllocateEvent::toCSV() const {
+std::string NesBufferAllocateEvent::toString() const {
     return "BufferAllocation " + id.getLocalQueryId().getRawValue() + " : " + std::to_string(size);
 }
 
 NesBufferManagerAllocateEvent::NesBufferManagerAllocateEvent(size_t bufferSize) : size(bufferSize){};
 
-std::string NesBufferManagerAllocateEvent::toCSV() const {
+std::string NesBufferManagerAllocateEvent::toString() const {
     return "BufferManagerAllocation : " + std::to_string(size);
 }
 
 NesCompilationTimeEvent::NesCompilationTimeEvent(QueryId queryId, size_t compilationTimeMs) : id(queryId), size(compilationTimeMs){};
 
-std::string NesCompilationTimeEvent::toCSV() const {
-    return "CompilationTime " + id.getLocalQueryId().getRawValue() + " : " + std::to_string(size);  // TODO: make csv
+std::string NesCompilationTimeEvent::toString() const {
+    return "CompilationTime " + id.getLocalQueryId().getRawValue() + " : " + std::to_string(size);
 }
 
 // Query level events
 NesQueryStartedEvent::NesQueryStartedEvent(QueryId queryId) : id(queryId) {};
-std::string NesQueryStartedEvent::toCSV() const {
+std::string NesQueryStartedEvent::toString() const {
     return "QueryStarted ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(getTimestamp());
 }
 
 NesQueryStoppedEvent::NesQueryStoppedEvent(QueryId queryId) : id(queryId) {};
-std::string NesQueryStoppedEvent::toCSV() const
+std::string NesQueryStoppedEvent::toString() const
 {
     return "QueryStopped ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(getTimestamp());
 }
 
 NesQueryRegisteredEvent::NesQueryRegisteredEvent(QueryId queryId) : id(queryId) {};
-std::string NesQueryRegisteredEvent::toCSV() const
+std::string NesQueryRegisteredEvent::toString() const
 {
     return "QueryRegistered ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(getTimestamp());
 }
 
 NesQueryFailedEvent::NesQueryFailedEvent(QueryId queryId, std::string exceptionMessage)
     : id(queryId), exceptionMessage(std::move(exceptionMessage)) {};
-std::string NesQueryFailedEvent::toCSV() const
+std::string NesQueryFailedEvent::toString() const
 {
     return "QueryFailed ," + id.getLocalQueryId().getRawValue() + "," + exceptionMessage;
 }
 
 NesWorkerCpuTimeEvent::NesWorkerCpuTimeEvent(QueryId queryId, uint64_t cpuTimeMicros) : id(queryId), cpuTimeMicros(cpuTimeMicros) {};
-std::string NesWorkerCpuTimeEvent::toCSV() const
+std::string NesWorkerCpuTimeEvent::toString() const
 {
     return "WorkerCpuTime ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(cpuTimeMicros);
 }
 
 NesWorkerMemoryUsageEvent::NesWorkerMemoryUsageEvent(QueryId queryId, uint64_t residentMemoryKb)
     : id(queryId), residentMemoryKb(residentMemoryKb) {};
-std::string NesWorkerMemoryUsageEvent::toCSV() const
+std::string NesWorkerMemoryUsageEvent::toString() const
 {
     return "WorkerMemoryUsage ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(residentMemoryKb);
 }
 
 NesWorkerActiveQueryCountEvent::NesWorkerActiveQueryCountEvent(QueryId queryId, uint64_t activeQueryCount)
     : id(queryId), activeQueryCount(activeQueryCount) {};
-std::string NesWorkerActiveQueryCountEvent::toCSV() const
+std::string NesWorkerActiveQueryCountEvent::toString() const
 {
     return "WorkerActiveQueryCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(activeQueryCount);
 }
 
 NesWorkerBufferTotalCountEvent::NesWorkerBufferTotalCountEvent(QueryId queryId, uint64_t bufferTotalCount)
     : id(queryId), bufferTotalCount(bufferTotalCount) {};
-std::string NesWorkerBufferTotalCountEvent::toCSV() const
+std::string NesWorkerBufferTotalCountEvent::toString() const
 {
     return "WorkerBufferTotalCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferTotalCount);
 }
 
 NesWorkerBufferAvailableCountEvent::NesWorkerBufferAvailableCountEvent(QueryId queryId, uint64_t bufferAvailableCount)
     : id(queryId), bufferAvailableCount(bufferAvailableCount) {};
-std::string NesWorkerBufferAvailableCountEvent::toCSV() const
+std::string NesWorkerBufferAvailableCountEvent::toString() const
 {
     return "WorkerBufferAvailableCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferAvailableCount);
 }
 
 NesWorkerBufferUsedCountEvent::NesWorkerBufferUsedCountEvent(QueryId queryId, uint64_t bufferUsedCount)
     : id(queryId), bufferUsedCount(bufferUsedCount) {};
-std::string NesWorkerBufferUsedCountEvent::toCSV() const
+std::string NesWorkerBufferUsedCountEvent::toString() const
 {
     return "WorkerBufferUsedCount ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferUsedCount);
 }
 
 NesWorkerBufferUsedBytesEvent::NesWorkerBufferUsedBytesEvent(QueryId queryId, uint64_t bufferUsedBytes)
     : id(queryId), bufferUsedBytes(bufferUsedBytes) {};
-std::string NesWorkerBufferUsedBytesEvent::toCSV() const
+std::string NesWorkerBufferUsedBytesEvent::toString() const
 {
     return "WorkerBufferUsedBytes ," + id.getLocalQueryId().getRawValue() + "," + std::to_string(bufferUsedBytes);
 }
@@ -110,7 +110,7 @@ NesQueryResourceDeltaEvent::NesQueryResourceDeltaEvent(
 {
 }
 
-std::string NesQueryResourceDeltaEvent::toCSV() const
+std::string NesQueryResourceDeltaEvent::toString() const
 {
     const auto startMs = std::chrono::duration_cast<std::chrono::milliseconds>(startTimestamp.time_since_epoch()).count();
     const auto stopMs = std::chrono::duration_cast<std::chrono::milliseconds>(stopTimestamp.time_since_epoch()).count();
