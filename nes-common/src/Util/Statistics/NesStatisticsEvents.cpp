@@ -5,16 +5,22 @@
 
 namespace NES {
 
-NesBufferAllocateEvent::NesBufferAllocateEvent(int queryId, size_t bufferSize) : id(queryId), size(bufferSize){};
+NesBufferAllocateEvent::NesBufferAllocateEvent(QueryId queryId, size_t bufferSize) : id(queryId), size(bufferSize){};
 
 std::string NesBufferAllocateEvent::toCSV() const {
-    return "BufferAllocation " + std::to_string(id) + " : " + std::to_string(size);  // TODO: make this actual csv
+    return "BufferAllocation " + id.getLocalQueryId().getRawValue() + " : " + std::to_string(size);
 }
 
-NesCompilationTimeEvent::NesCompilationTimeEvent(int queryId, size_t compilationTimeMs) : id(queryId), size(compilationTimeMs){};
+NesBufferManagerAllocateEvent::NesBufferManagerAllocateEvent(size_t bufferSize) : size(bufferSize){};
+
+std::string NesBufferManagerAllocateEvent::toCSV() const {
+    return "BufferManagerAllocation : " + std::to_string(size);
+}
+
+NesCompilationTimeEvent::NesCompilationTimeEvent(QueryId queryId, size_t compilationTimeMs) : id(queryId), size(compilationTimeMs){};
 
 std::string NesCompilationTimeEvent::toCSV() const {
-    return "CompilationTime " + std::to_string(id) + " : " + std::to_string(size);  // TODO: make csv
+    return "CompilationTime " + id.getLocalQueryId().getRawValue() + " : " + std::to_string(size);  // TODO: make csv
 }
 
 // Query level events

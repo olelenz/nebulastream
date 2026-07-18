@@ -47,6 +47,7 @@
 #include <ExecutableQueryPlan.hpp>
 #include <Interfaces.hpp>
 #include <PipelineExecutionContext.hpp>
+#include <Util/Statistics/NesStatistics.hpp>
 #include <QueryEngineConfiguration.hpp>
 #include <QueryEngineStatisticListener.hpp>
 #include <QueryStatus.hpp>
@@ -202,6 +203,7 @@ using Queue = folly::MPMCQueue<Task>;
 
 struct DefaultPEC final : PipelineExecutionContext
 {
+    QueryId queryId;
     std::unordered_map<OperatorHandlerId, std::shared_ptr<OperatorHandler>>* operatorHandlers = nullptr;
     std::function<bool(const TupleBuffer& tb, ContinuationPolicy)> handler;
     std::function<void(const TupleBuffer& tb, std::chrono::milliseconds duration)> repeatHandler;
@@ -221,10 +223,12 @@ struct DefaultPEC final : PipelineExecutionContext
         size_t numberOfThreads,
         WorkerThreadId threadId,
         PipelineId pipelineId,
+        QueryId queryId,
         std::shared_ptr<AbstractBufferProvider> bm,
         std::function<bool(const TupleBuffer& tb, ContinuationPolicy)> handler,
         std::function<void(const TupleBuffer& tb, std::chrono::milliseconds)> repeatHandler)
-        : handler(std::move(handler))
+        : queryId(queryId)
+        , handler(std::move(handler))
         , repeatHandler(std::move(repeatHandler))
         , bm(std::move(bm))
         , numberOfThreads(numberOfThreads)
@@ -242,7 +246,9 @@ struct DefaultPEC final : PipelineExecutionContext
     TupleBuffer allocateTupleBuffer() override
     {
         PRECONDITION(!wasRepeated, "A task should terminate after repeating");
-        return bm->getBufferBlocking();
+        auto buffer = bm->getBufferBlocking();
+        NES_LOG_STAT(NesBufferAllocateEvent, queryId, buffer.getBufferSize());
+        return buffer;
     }
 
     TupleBuffer& pinBuffer(TupleBuffer&& tupleBuffer) override
@@ -492,6 +498,7 @@ bool ThreadPool::WorkerThread::operator()(WorkTask& task) const
             pool.numberOfThreads(),
             WorkerThread::id,
             pipeline->id,
+            task.queryId,
             pool.bufferProvider,
             [&](const TupleBuffer& tupleBuffer, PipelineExecutionContext::ContinuationPolicy continuationPolicy)
             {
@@ -549,6 +556,7 @@ bool ThreadPool::WorkerThread::operator()(StartPipelineTask& startPipeline) cons
             pool.numberOfThreads(),
             WorkerThread::id,
             pipeline->id,
+            startPipeline.queryId,
             pool.bufferProvider,
             [](const TupleBuffer&, PipelineExecutionContext::ContinuationPolicy)
             {
@@ -627,6 +635,7 @@ bool ThreadPool::WorkerThread::operator()(StopPipelineTask& stopPipelineTask) co
         pool.numberOfThreads(),
         WorkerThread::id,
         stopPipelineTask.pipeline->id,
+        stopPipelineTask.queryId,
         pool.bufferProvider,
         [&](const TupleBuffer& tupleBuffer, PipelineExecutionContext::ContinuationPolicy policy)
         {

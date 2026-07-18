@@ -40,17 +40,34 @@ class NesBufferAllocateEvent : public NesStatisticsEvents{
 public:
     static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferAlloc;
 
-    explicit NesBufferAllocateEvent(int queryId, size_t bufferSize);
+    explicit NesBufferAllocateEvent(QueryId queryId, size_t bufferSize);
 
     std::string toCSV() const override;
 
     std::string getEventType() const override {return "BufferAllocation";};
-    std::string getQueryId() const override {return std::to_string(id);}
+    std::string getQueryId() const override {return id.getLocalQueryId().getRawValue();}
     uint64_t getMetricValue() const override {return size;}
     EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
-    int id;
+    QueryId id;
+    size_t size;
+};
+
+class NesBufferManagerAllocateEvent : public NesStatisticsEvents{
+public:
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferAlloc;
+
+    explicit NesBufferManagerAllocateEvent(size_t bufferSize);
+
+    std::string toCSV() const override;
+
+    std::string getEventType() const override {return "BufferManagerAllocation";};
+    std::string getQueryId() const override {return "";}
+    uint64_t getMetricValue() const override {return size;}
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
+
+private:
     size_t size;
 };
 
@@ -58,16 +75,16 @@ class NesCompilationTimeEvent : public NesStatisticsEvents{
 public:
     static constexpr EventTypeIndex typeIndex = EventTypeIndex::CompilationTime;
 
-    explicit NesCompilationTimeEvent(int queryId, size_t bufferSize);
+    explicit NesCompilationTimeEvent(QueryId queryId, size_t bufferSize);
 
     std::string toCSV() const override;
     std::string getEventType() const override {return "CompilationTime";};
-    std::string getQueryId() const override {return std::to_string(id);}
+    std::string getQueryId() const override {return id.getLocalQueryId().getRawValue();}
     uint64_t getMetricValue() const override {return size;}
     EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
-    int id;
+    QueryId id;
     size_t size;
 };
 
