@@ -172,7 +172,11 @@ std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan pl
             configuration.workerConfiguration.dumpQueryCompilationIR.getValue(), configuration.workerConfiguration.dumpGraph.getValue());
         auto request = std::make_unique<QueryCompilation::QueryCompilationRequest>(plan);
         request->dumpCompilationResult = dumpMode;
+        const auto compilationStart = std::chrono::steady_clock::now();
         auto result = compiler->compileQuery(std::move(request));
+        const auto compilationTime
+            = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - compilationStart).count();
+        NES_LOG_STAT(NesCompilationTimeEvent, plan.getQueryId(), compilationTime);
         INVARIANT(result, "expected successful query compilation or exception, but got nothing");
         nodeEngine->registerCompiledQueryPlan(plan.getQueryId(), std::move(result));
         return plan.getQueryId();

@@ -101,6 +101,9 @@ void configureArgumentParser(ArgumentParser& program)
         .scan<'i', int>();
     program.add_argument("--sequential").flag().help("force sequential query execution. Equivalent to `-n 1`");
     program.add_argument("--endless").flag().help("continuously issue queries to the worker");
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+    program.add_argument("--collectStatistics").flag().help("continuously export process-local runtime statistics");
+#endif
     program.add_argument("--optimizer")
         .default_value<std::vector<std::string>>({})
         .append()
@@ -393,6 +396,31 @@ void applyExecutionOptions(const ArgumentParser& program, NES::SystestConfigurat
     }
 }
 
+void applyStatisticsOptions(const ArgumentParser& program, NES::SystestConfiguration& config)
+{
+#if defined(NES_COLLECT_STATISTICS_ENABLED)
+    if (not program.is_used("--collectStatistics"))
+    {
+        return;
+    }
+    if (config.remoteWorker.getValue())
+    {
+        std::cerr << "--collectStatistics supports only local embedded execution; --remote is unsupported\n";
+        std::exit(EXIT_FAILURE); ///NOLINT(concurrency-mt-unsafe)
+    }
+    if (config.endlessMode.getValue())
+    {
+        std::cerr << "--collectStatistics does not currently support --endless\n";
+        std::exit(EXIT_FAILURE); ///NOLINT(concurrency-mt-unsafe)
+    }
+    config.collectStatistics = true;
+#endif
+#if !defined(NES_COLLECT_STATISTICS_ENABLED)
+    static_cast<void>(program);
+    static_cast<void>(config);
+#endif
+}
+
 void setValidatedConfigFile(
     const ArgumentParser& program, const std::string& argumentName, decltype(NES::SystestConfiguration::workerConfig)& option)
 {
@@ -489,6 +517,7 @@ NES::SystestConfiguration parseConfiguration(int argc, const char** argv)
     applyTestLocation(program, config);
     applyGroupSelection(program, config);
     applyExecutionOptions(program, config);
+    applyStatisticsOptions(program, config);
     applyConfigurationFiles(program, config);
     applyOptimizerConfiguration(program, config);
     applySingleNodeWorkerConfiguration(program, config);
