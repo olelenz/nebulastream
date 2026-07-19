@@ -58,16 +58,16 @@ class NesCompilationTimeEvent : public NesStatisticsEvents{
 public:
     static constexpr EventTypeIndex typeIndex = EventTypeIndex::CompilationTime;
 
-    explicit NesCompilationTimeEvent(int queryId, size_t bufferSize);
+    explicit NesCompilationTimeEvent(QueryId queryId, size_t compilationTimeMs);
 
     std::string toCSV() const override;
     std::string getEventType() const override {return "CompilationTime";};
-    std::string getQueryId() const override {return std::to_string(id);}
+    std::string getQueryId() const override { return id.getLocalQueryId().getRawValue(); }
     uint64_t getMetricValue() const override {return size;}
     EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
-    int id;
+    QueryId id;
     size_t size;
 };
 
