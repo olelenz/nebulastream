@@ -12,7 +12,7 @@ class MockStatsEvent : public NesStatisticsEvents
 {
 public:
     explicit MockStatsEvent(int value) : val(value){}
-    std::string toCSV() const override
+    std::string toString() const override
     {
         return "val_" + std::to_string(val);
     }
