@@ -166,7 +166,7 @@ std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan pl
 
         listener->onEvent(SubmitQuerySystemEvent{plan.getQueryId(), explain(plan, ExplainVerbosity::Debug)});
 
-        NES_LOG_STAT(NesQueryRegisteredEvent, plan.getQueryId());
+        // NES_LOG_STAT(NesQueryRegisteredEvent, plan.getQueryId());
 
         const DumpMode dumpMode(
             configuration.workerConfiguration.dumpQueryCompilationIR.getValue(), configuration.workerConfiguration.dumpGraph.getValue());
@@ -191,15 +191,15 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
         PRECONDITION(queryId != INVALID_QUERY_ID, "QueryId must be not invalid!");
         auto timestamp = std::chrono::system_clock::now();
 
-        NES_LOG_STAT(NesQueryStartedEvent, queryId);
-#if defined(NES_STATISTICS_ENABLED)
-        // Attempt to collect the current process-level resource counters.
-        // resourceSnapshot is std::optional<QueryResourceSnapshot>.
-        if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
-        {
-            NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);
-        }
-#endif
+        // NES_LOG_STAT(NesQueryStartedEvent, queryId);
+// #if defined(NES_STATISTICS_ENABLED)
+//         // Attempt to collect the current process-level resource counters.
+//         // resourceSnapshot is std::optional<QueryResourceSnapshot>.
+//         if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
+//         {
+//             NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);
+//         }
+// #endif
 
         nodeEngine->startQuery(queryId);
 

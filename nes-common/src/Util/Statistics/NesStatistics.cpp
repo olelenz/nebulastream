@@ -40,7 +40,7 @@ void NesStatistics::start(StatisticsWorkerType type, const std::string& filePath
         workThread = std::thread(&NesStatistics::workStatsQueue, this);
     } else if(type == StatisticsWorkerType::RingBuffer) {
         workThread = std::thread(&NesStatistics::workStatsRingBuffer, this);
-        startResourceSampler();
+        // startResourceSampler();
     }
 }
 

@@ -68,7 +68,7 @@ bool QueryLog::logQueryFailure(const QueryId queryId, const Exception exception,
             statusChange,
             [](const QueryStatusChange& lhs, const QueryStatusChange& rhs) { return lhs.timestamp < rhs.timestamp; });
         changes.emplace(pos, std::move(statusChange));
-        NES_LOG_STAT(NesQueryFailedEvent, queryId, exception.what());
+        // NES_LOG_STAT(NesQueryFailedEvent, queryId, exception.what());
         return true;
     }
     return false;
@@ -78,31 +78,31 @@ bool QueryLog::logQueryStatusChange(const QueryId queryId, QueryStatus status, c
 {
     if (status == QueryStatus::Stopped)
     {
-        NES_LOG_STAT(NesQueryStoppedEvent, queryId);
-#if defined(NES_STATISTICS_ENABLED)
-        auto& stats = NesStatistics::getInstance();
-        if (const auto stopSnapshot = collectProcessResourceSnapshot(timestamp))
-        {
-            if (const auto startSnapshot = stats.consumeQueryResourceStart(queryId))
-            {
-                // Approximate process-level delta between query start and stop snapshots. This is not
-                // exact query-exclusive CPU/memory usage when multiple queries share the worker process.
-                const auto cpuDeltaMicros = stopSnapshot->cpuTimeMicros >= startSnapshot->cpuTimeMicros
-                    ? stopSnapshot->cpuTimeMicros - startSnapshot->cpuTimeMicros
-                    : 0;
-                const auto memoryDeltaKb
-                    = static_cast<int64_t>(stopSnapshot->residentMemoryKb) - static_cast<int64_t>(startSnapshot->residentMemoryKb);
-                NES_LOG_STAT(NesQueryResourceDeltaEvent,
-                    queryId, startSnapshot->timestamp, stopSnapshot->timestamp, cpuDeltaMicros, memoryDeltaKb);
-            }
-        }
-        else
-        {
-            // Stop-time resource collection failed, so we cannot compute a delta.
-            // Still remove the query's start snapshot from NesStatistics to avoid leaving stale per-query state behind.
-            static_cast<void>(stats.consumeQueryResourceStart(queryId));
-        }
-#endif
+        // NES_LOG_STAT(NesQueryStoppedEvent, queryId);
+// #if defined(NES_STATISTICS_ENABLED)
+//         auto& stats = NesStatistics::getInstance();
+//         if (const auto stopSnapshot = collectProcessResourceSnapshot(timestamp))
+//         {
+//             if (const auto startSnapshot = stats.consumeQueryResourceStart(queryId))
+//             {
+//                 // Approximate process-level delta between query start and stop snapshots. This is not
+//                 // exact query-exclusive CPU/memory usage when multiple queries share the worker process.
+//                 const auto cpuDeltaMicros = stopSnapshot->cpuTimeMicros >= startSnapshot->cpuTimeMicros
+//                     ? stopSnapshot->cpuTimeMicros - startSnapshot->cpuTimeMicros
+//                     : 0;
+//                 const auto memoryDeltaKb
+//                     = static_cast<int64_t>(stopSnapshot->residentMemoryKb) - static_cast<int64_t>(startSnapshot->residentMemoryKb);
+//                 // NES_LOG_STAT(NesQueryResourceDeltaEvent,
+//                 //     queryId, startSnapshot->timestamp, stopSnapshot->timestamp, cpuDeltaMicros, memoryDeltaKb);
+//             }
+//         }
+//         else
+//         {
+//             // Stop-time resource collection failed, so we cannot compute a delta.
+//             // Still remove the query's start snapshot from NesStatistics to avoid leaving stale per-query state behind.
+//             static_cast<void>(stats.consumeQueryResourceStart(queryId));
+//         }
+// #endif
     }
 
     QueryStatusChange statusChange(std::move(status), timestamp);
