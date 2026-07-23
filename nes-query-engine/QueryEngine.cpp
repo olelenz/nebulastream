@@ -247,7 +247,7 @@ struct DefaultPEC final : PipelineExecutionContext
     {
         PRECONDITION(!wasRepeated, "A task should terminate after repeating");
         auto buffer = bm->getBufferBlocking();
-        NES_LOG_STAT(NesBufferAllocateEvent, queryId, buffer.getBufferSize());
+        // NES_LOG_STAT(NesBufferAllocateEvent, queryId, buffer.getBufferSize());
         return buffer;
     }
 
