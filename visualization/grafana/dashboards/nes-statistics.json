@@ -1,0 +1,24 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"type":"stat","title":"Latest Sampled Active Queries","description":"Active query count observed in the latest runtime statistics sample.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_active_query_count","refId":"A"}],"fieldConfig":{"defaults":{"unit":"short"}},"gridPos":{"h":4,"w":6,"x":0,"y":0}},
+    {"type":"stat","title":"Worker Memory Usage","description":"Latest sampled resident memory usage.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_memory_usage_kilobytes","refId":"A"}],"fieldConfig":{"defaults":{"unit":"kbytes"}},"gridPos":{"h":4,"w":6,"x":6,"y":0}},
+    {"type":"stat","title":"Latest Sampled Buffer Usage","description":"Worker buffer usage observed in the latest runtime statistics sample.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_buffer_used_count","refId":"A"}],"fieldConfig":{"defaults":{"unit":"short"}},"gridPos":{"h":4,"w":6,"x":12,"y":0}},
+    {"type":"stat","title":"Latest Compilation Duration","description":"Duration of the most recent successful query compilation.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_query_compilation_time_milliseconds","refId":"A"}],"fieldConfig":{"defaults":{"unit":"ms"}},"gridPos":{"h":4,"w":6,"x":18,"y":0}},
+    {"type":"timeseries","title":"Accumulated CPU Time","description":"Accumulated process CPU time sampled during execution.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_cpu_time_milliseconds","legendFormat":"CPU time","refId":"A"}],"fieldConfig":{"defaults":{"unit":"ms"}},"gridPos":{"h":8,"w":12,"x":0,"y":4}},
+    {"type":"timeseries","title":"Worker Memory Usage","description":"Periodically sampled resident memory usage over time.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_memory_usage_kilobytes * 1024","legendFormat":"Memory","refId":"A"}],"fieldConfig":{"defaults":{"unit":"bytes"}},"gridPos":{"h":8,"w":12,"x":12,"y":4}},
+    {"type":"timeseries","title":"Sampled Active Queries","description":"Periodically sampled active query count over time.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_active_query_count","legendFormat":"Queries","refId":"A"}],"fieldConfig":{"defaults":{"unit":"short"}},"gridPos":{"h":8,"w":12,"x":0,"y":12}},
+    {"type":"timeseries","title":"Sampled Buffer Usage","description":"Periodically sampled worker buffer usage over time.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_worker_buffer_used_count","legendFormat":"Buffers","refId":"A"}],"fieldConfig":{"defaults":{"unit":"short"}},"gridPos":{"h":8,"w":12,"x":12,"y":12}},
+    {"type":"stat","title":"Exporter Last Sequence","description":"Last statistics sequence processed by the exporter.","datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"nes_statistics_exporter_last_sequence","refId":"A"}],"fieldConfig":{"defaults":{"unit":"short"}},"gridPos":{"h":4,"w":24,"x":0,"y":20}}
+  ],
+  "refresh": "1s",
+  "schemaVersion": 40,
+  "tags": ["NebulaStream", "statistics"],
+  "templating": {"list": []},
+  "time": {"from": "now-15m", "to": "now"},
+  "timezone": "browser",
+  "title": "NebulaStream Runtime Statistics",
+  "uid": "nes-runtime-statistics",
+  "version": 1
+}
