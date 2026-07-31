@@ -6,14 +6,15 @@
 namespace NES {
 
 enum class EventTypeIndex : uint8_t {
-    BufferAlloc    = 0,
-    CompilationTime = 1,
-    QueryStarted   = 2,
-    QueryStopped   = 3,
-    QueryRegistered = 4,
-    QueryFailed    = 5,
-    QueryResourceDelta = 6,
-    Other          = 7,
+    BufferAlloc         = 0,
+    BufferManagerAlloc  = 1,
+    CompilationTime     = 1,
+    QueryStarted        = 2,
+    QueryStopped        = 3,
+    QueryRegistered     = 4,
+    QueryFailed         = 5,
+    QueryResourceDelta  = 6,
+    Other               = 7,
     COUNT
 };
 
@@ -56,7 +57,7 @@ private:
 
 class NesBufferManagerAllocateEvent : public NesStatisticsEvents{
 public:
-    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferAlloc;
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferManagerAlloc;
 
     explicit NesBufferManagerAllocateEvent(size_t bufferSize);
 
