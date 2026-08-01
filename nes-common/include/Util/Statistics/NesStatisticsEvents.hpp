@@ -6,14 +6,15 @@
 namespace NES {
 
 enum class EventTypeIndex : uint8_t {
-    BufferAlloc    = 0,
-    CompilationTime = 1,
-    QueryStarted   = 2,
-    QueryStopped   = 3,
-    QueryRegistered = 4,
-    QueryFailed    = 5,
-    QueryResourceDelta = 6,
-    Other          = 7,
+    BufferAlloc         = 0,
+    BufferManagerAlloc  = 1,
+    CompilationTime     = 2,
+    QueryStarted        = 3,
+    QueryStopped        = 4,
+    QueryRegistered     = 5,
+    QueryFailed         = 6,
+    QueryResourceDelta  = 7,
+    Other               = 8,
     COUNT
 };
 
@@ -56,7 +57,7 @@ private:
 
 class NesBufferManagerAllocateEvent : public NesStatisticsEvents{
 public:
-    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferAlloc;
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::BufferManagerAlloc;
 
     explicit NesBufferManagerAllocateEvent(size_t bufferSize);
 
@@ -162,6 +163,9 @@ public:
     std::string getEventType() const override { return "WorkerCpuTime"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return cpuTimeMicros; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -176,6 +180,9 @@ public:
     std::string getEventType() const override { return "WorkerMemoryUsage"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return residentMemoryKb; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -190,6 +197,9 @@ public:
     std::string getEventType() const override { return "WorkerActiveQueryCount"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return activeQueryCount; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -204,6 +214,9 @@ public:
     std::string getEventType() const override { return "WorkerBufferTotalCount"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return bufferTotalCount; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -218,6 +231,9 @@ public:
     std::string getEventType() const override { return "WorkerBufferAvailableCount"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return bufferAvailableCount; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -232,6 +248,9 @@ public:
     std::string getEventType() const override { return "WorkerBufferUsedCount"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return bufferUsedCount; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;
@@ -246,6 +265,9 @@ public:
     std::string getEventType() const override { return "WorkerBufferUsedBytes"; }
     std::string getQueryId() const override { return "0"; }
     uint64_t getMetricValue() const override { return bufferUsedBytes; }
+    
+    static constexpr EventTypeIndex typeIndex = EventTypeIndex::Other;
+    EventTypeIndex getTypeIndex() const override { return typeIndex; }
 
 private:
     QueryId id;

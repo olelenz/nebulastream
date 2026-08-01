@@ -79,6 +79,16 @@ Source::FillTupleBufferResult StatsSource::fillTupleBuffer(TupleBuffer& tupleBuf
         std::vector<RawEventData> newEvents;
         while (newEvents.empty() && !stopToken.stop_requested())
         {
+            if (maxRuntime >= 0)
+            {
+                auto currentElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime).count();
+                if (currentElapsed >= maxRuntime)
+                {
+                    NES_INFO("Reached max runtime during polling! Stopping StatsSource");
+                    if (writtenBytes > 0) return FillTupleBufferResult::withBytes(writtenBytes);
+                    return FillTupleBufferResult::eos();
+                }
+            }
             newEvents = stats.getEventsSince(lastSequenceNumber);
             if (newEvents.empty())
             {
@@ -88,6 +98,7 @@ Source::FillTupleBufferResult StatsSource::fillTupleBuffer(TupleBuffer& tupleBuf
 
         if (stopToken.stop_requested() && newEvents.empty())
         {
+            if (writtenBytes > 0) return FillTupleBufferResult::withBytes(writtenBytes);
             return FillTupleBufferResult::eos();
         }
 
@@ -125,7 +136,7 @@ Source::FillTupleBufferResult StatsSource::fillTupleBuffer(TupleBuffer& tupleBuf
     catch (const std::exception& ex)
     {
         NES_ERROR("Failed to fill the TupleBuffer. Error: {}", ex.what());
-        throw ex;
+        throw;
     }
 }
 
