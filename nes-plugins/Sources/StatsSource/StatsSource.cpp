@@ -136,7 +136,7 @@ Source::FillTupleBufferResult StatsSource::fillTupleBuffer(TupleBuffer& tupleBuf
     catch (const std::exception& ex)
     {
         NES_ERROR("Failed to fill the TupleBuffer. Error: {}", ex.what());
-        throw ex;
+        throw;
     }
 }
 
