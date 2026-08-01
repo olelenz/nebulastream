@@ -14,6 +14,7 @@
 
 #include <GeneratorFields.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -566,6 +567,26 @@ std::ostream& RandomStrField::generate(std::ostream& os, std::mt19937& randEng)
     {
         os << randomAlphabetChar();
     }
+    return os;
+}
+
+TimestampField::TimestampField(std::string_view /*rawSchemaLine*/){
+    // nothing to do here
+}
+
+void TimestampField::validate(std::string_view /*rawSchemaLine*/){
+    // const auto parameters = splitWithStringDelimiter<std::string_view>(rawSchemaLine, "");
+    // if(parameters.size() > 1){
+    //     throw InvalidConfigParameter("TIMESTAMP field does not take additional parameters.");
+    // }
+}
+
+std::ostream& TimestampField::generate(std::ostream& os, std::mt19937& /*randEng*/){
+    auto now = std::chrono::system_clock::now();
+    auto duration = now.time_since_epoch();
+    auto milis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+    os << static_cast<uint64_t>(milis);
     return os;
 }
 

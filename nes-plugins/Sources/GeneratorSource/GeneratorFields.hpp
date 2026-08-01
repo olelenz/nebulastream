@@ -38,6 +38,7 @@ enum class FieldIdentifier : uint8_t
     WORDLIST,
     RANDOMSTR,
     INVALID,
+    TIMESTAMP
 };
 
 /// @brief Variant containing the types that a field can generate
@@ -147,8 +148,15 @@ private:
                                's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'});
 };
 
+class TimestampField final : public BaseGeneratorField{
+    public:
+        TimestampField(std::string_view rawSchemaLine);
+        std::ostream& generate(std::ostream& os, std::mt19937& randEng) override;
+        static void validate(std::string_view rawSchemaLine);
+};
+
 /// @brief Variant containing the types of base generator fields
-using GeneratorFieldType = std::variant<SequenceField, NormalDistributionField, WordListField, RandomStrField>;
+using GeneratorFieldType = std::variant<SequenceField, NormalDistributionField, WordListField, RandomStrField, TimestampField>;
 
 struct FieldValidator
 {
@@ -158,11 +166,12 @@ struct FieldValidator
 
 /// @brief Array containing functions paired with the fields identifier used to validate the fields syntax
 /// NOLINTBEGIN(cert-err58-cpp): do not warn about static storage duration
-static const std::array<FieldValidator, 4> Validators = {
+static const std::array<FieldValidator, 5> Validators = {
     {{.identifier = FieldIdentifier::SEQUENCE, .validator = SequenceField::validate},
      {.identifier = FieldIdentifier::NORMAL_DISTRIBUTION, .validator = NormalDistributionField::validate},
      {.identifier = FieldIdentifier::WORDLIST, .validator = WordListField::validate},
-     {.identifier = FieldIdentifier::RANDOMSTR, .validator = RandomStrField::validate}},
+     {.identifier = FieldIdentifier::RANDOMSTR, .validator = RandomStrField::validate},
+     {.identifier = FieldIdentifier::TIMESTAMP, .validator = TimestampField::validate}},
 };
 /// NOLINTEND(cert-err58-cpp)
 

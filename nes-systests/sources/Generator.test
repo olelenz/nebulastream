@@ -170,3 +170,21 @@ INTO generator_sink_text;
 17,yellow,X
 18,brown,bl5
 19,yellow,IgiKX
+
+CREATE LOGICAL SOURCE generator_timestamp(id UINT64 NOT NULL, time_ms UINT64 NOT NULL);
+CREATE PHYSICAL SOURCE FOR generator_timestamp TYPE GENERATOR SET(
+       'ONE' as `SOURCE`.STOP_GENERATOR_WHEN_SEQUENCE_FINISHES,
+       1 AS `SOURCE`.SEED,
+       'SEQUENCE UINT64 0 5 1, TIMESTAMP' AS `SOURCE`.GENERATOR_SCHEMA
+);
+CREATE SINK generator_sink_timestamp(generator_timestamp.id UINT64 NOT NULL) TYPE File;
+SELECT id
+FROM generator_timestamp
+WHERE time_ms > UINT64(1779460968642)
+INTO generator_sink_timestamp;
+----
+0
+1
+2
+3
+4

@@ -34,6 +34,8 @@
 #include <ErrorHandling.hpp>
 #include <TupleBufferImpl.hpp>
 
+#include <Util/Statistics/NesStatistics.hpp>
+
 namespace NES
 {
 
@@ -186,6 +188,7 @@ std::optional<TupleBuffer> BufferManager::getBufferNoBlocking()
     }
     if (memSegment->controlBlock->prepare(shared_from_this()))
     {
+        NES_LOG_STAT(NesBufferManagerAllocateEvent, memSegment->size);
         return TupleBuffer(memSegment->controlBlock.get(), memSegment->ptr, memSegment->size);
     }
     throw InvalidRefCountForBuffer("[BufferManager] got buffer with invalid reference counter");
@@ -201,6 +204,7 @@ std::optional<TupleBuffer> BufferManager::getBufferWithTimeout(const std::chrono
     }
     if (memSegment->controlBlock->prepare(shared_from_this()))
     {
+        NES_LOG_STAT(NesBufferManagerAllocateEvent, memSegment->size);
         return TupleBuffer(memSegment->controlBlock.get(), memSegment->ptr, memSegment->size);
     }
     throw InvalidRefCountForBuffer("[BufferManager] got buffer with invalid reference counter");

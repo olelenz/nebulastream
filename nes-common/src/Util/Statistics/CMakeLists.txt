@@ -11,11 +11,7 @@
 # limitations under the License.
 
 add_source_files(nes-common
-        Common.cpp
-        Strings.cpp
-        Files.cpp
-        UUID.cpp
-        Signal.cpp
+        NesStatistics.cpp
+        NesStatisticsEvents.cpp
+        NesResourceUsage.cpp
 )
-add_subdirectory(Logger)
-add_subdirectory(Statistics)

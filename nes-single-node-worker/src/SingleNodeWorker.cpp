@@ -29,6 +29,7 @@
 #include <Identifiers/NESStrongTypeFormat.hpp>
 #include <Listeners/QueryLog.hpp>
 #include <Plans/LogicalPlan.hpp>
+#include <Runtime/BufferManager.hpp>
 #include <Runtime/NodeEngineBuilder.hpp>
 
 #include <Util/Logger/Logger.hpp>
@@ -46,11 +47,14 @@
 #include <SingleNodeWorkerConfiguration.hpp>
 #include <WorkerStatus.hpp>
 
+#include <Util/Statistics/NesStatistics.hpp>
+#include <Util/Statistics/NesStatisticsEvents.hpp>
+#include <Util/Statistics/NesResourceUsage.hpp>
+
 extern void initNetworkServices(const std::string& connectionAddr, const NES::Host& host, const NES::NetworkOptions& options);
 
 namespace NES
 {
-
 SingleNodeWorker::~SingleNodeWorker() = default;
 SingleNodeWorker::SingleNodeWorker(SingleNodeWorker&& other) noexcept = default;
 SingleNodeWorker& SingleNodeWorker::operator=(SingleNodeWorker&& other) noexcept = default;
@@ -75,6 +79,47 @@ SingleNodeWorker::SingleNodeWorker(const SingleNodeWorkerConfiguration& configur
     nodeEngine = NodeEngineBuilder(configuration.workerConfiguration, copyPtr(listener)).build(host);
     compiler = std::make_unique<QueryCompilation::QueryCompiler>(configuration.workerConfiguration.defaultQueryExecution);
 
+    std::weak_ptr<QueryLog> queryLog = nodeEngine->getQueryLog();
+    NES::NesStatistics::getInstance().setActiveQueryCountProvider(
+        [queryLog]() -> uint64_t
+        {
+            const auto lockedQueryLog = queryLog.lock();
+            if (!lockedQueryLog)
+            {
+                return 0;
+            }
+
+            uint64_t activeQueryCount = 0;
+            for (const auto& queryStatus : lockedQueryLog->getStatus())
+            {
+                if (queryStatus.state == QueryStatus::Started || queryStatus.state == QueryStatus::Running)
+                {
+                    ++activeQueryCount;
+                }
+            }
+            return activeQueryCount;
+        });
+
+    std::weak_ptr<BufferManager> bufferManager = nodeEngine->getBufferManager();
+    NES::NesStatistics::getInstance().setWorkerBufferUsageProvider(
+        [bufferManager]() -> WorkerBufferUsageSnapshot
+        {
+            const auto lockedBufferManager = bufferManager.lock();
+            if (!lockedBufferManager)
+            {
+                return WorkerBufferUsageSnapshot{};
+            }
+
+            const auto total = static_cast<uint64_t>(lockedBufferManager->getNumOfPooledBuffers());
+            const auto available = static_cast<uint64_t>(lockedBufferManager->getNumberOfAvailableBuffers());
+            const auto bufferSize = static_cast<uint64_t>(lockedBufferManager->getBufferSize());
+            return WorkerBufferUsageSnapshot{
+                .totalCount = total,
+                .availableCount = available,
+                .bufferSize = bufferSize,
+            };
+        });
+
     if (!configuration.dataAddress.getValue().empty())
     {
         const auto& networkConfig = configuration.workerConfiguration.network;
@@ -89,6 +134,13 @@ SingleNodeWorker::SingleNodeWorker(const SingleNodeWorkerConfiguration& configur
                 .receiverIOThreads = static_cast<uint32_t>(networkConfig.receiverIOThreads.getValue()),
             });
     }
+
+    auto filePath = "/tmp/nebulastream/nes-statistics.csv";
+
+    NES::NesStatistics::getInstance().start(
+        NES::StatisticsWorkerType::RingBuffer,
+        filePath
+    );
 }
 
 std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan plan) noexcept
@@ -113,6 +165,9 @@ std::expected<QueryId, Exception> SingleNodeWorker::registerQuery(LogicalPlan pl
         const LogContext context("queryId", plan.getQueryId());
 
         listener->onEvent(SubmitQuerySystemEvent{plan.getQueryId(), explain(plan, ExplainVerbosity::Debug)});
+
+        NES_LOG_STAT(NesQueryRegisteredEvent, plan.getQueryId());
+
         const DumpMode dumpMode(
             configuration.workerConfiguration.dumpQueryCompilationIR.getValue(), configuration.workerConfiguration.dumpGraph.getValue());
         auto request = std::make_unique<QueryCompilation::QueryCompilationRequest>(plan);
@@ -134,7 +189,20 @@ std::expected<void, Exception> SingleNodeWorker::startQuery(QueryId queryId) noe
     CPPTRACE_TRY
     {
         PRECONDITION(queryId != INVALID_QUERY_ID, "QueryId must be not invalid!");
+        auto timestamp = std::chrono::system_clock::now();
+
+        NES_LOG_STAT(NesQueryStartedEvent, queryId);
+#if defined(NES_STATISTICS_ENABLED)
+        // Attempt to collect the current process-level resource counters.
+        // resourceSnapshot is std::optional<QueryResourceSnapshot>.
+        if (const auto resourceSnapshot = collectProcessResourceSnapshot(timestamp))
+        {
+            NES::NesStatistics::getInstance().recordQueryResourceStart(queryId, *resourceSnapshot);
+        }
+#endif
+
         nodeEngine->startQuery(queryId);
+
         return {};
     }
     CPPTRACE_CATCH(...)
