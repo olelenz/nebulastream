@@ -14,7 +14,7 @@ const int NUM_THREADS = 10;
 
 void workerTaskAsync(int threadId, int eventsPerThread) {
     for (int i = 0; i < eventsPerThread; ++i) {
-        NES_LOG_STAT(NesBufferAllocateEvent, threadId * 10000 + i, 4096);
+        NES_LOG_STAT(NesBufferAllocateEvent, QueryId::createDistributed(DistributedQueryId(std::to_string(threadId * 10000 + i))), 4096);
     }
 }
 
